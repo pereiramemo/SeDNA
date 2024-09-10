@@ -102,19 +102,6 @@ if not os.path.exists(bgc_annot_sorted_dir):
         sys.exit(1)
 
 ###############################################################################
-#### 4.5 output_tables dir
-###############################################################################
-
-output_tables_dir = f"{output_dir}/tables"
-
-if not os.path.exists(output_tables_dir):
-    try:
-        os.makedirs(output_tables_dir)
-    except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
-
-###############################################################################
 ## 5.Create antismash output dir
 ###############################################################################
 
@@ -162,25 +149,25 @@ else:
 #### 6 anitsmash BGC metadata
 ###############################################################################
 
-    # find all antismash GBK output files 
-    antismash_output_gbks = find_files(input_dir = antismash_output_current_dir,
-                                       pattern = ".*.region.*.gbk")
-    
-    try:
-        os.makedirs(f'{antismash_output_current_dir}/gbks')
-    except FileExistsError:
-        print(f"Directory '{antismash_output_current_dir}/gbks' already exists.")
-        sys.exit()
+# find all antismash GBK output files 
+antismash_output_gbks = utilities.find_files(input_dir = antismash_output_current_dir,
+                                             pattern = ".*.region.*.gbk")
 
-    for gbk in antismash_output_gbks:
-            shutil.move(gbk, f'{antismash_output_current_dir}/gbks')
+try:
+    os.makedirs(f'{antismash_output_current_dir}/gbks')
+except FileExistsError:
+    print(f"Directory '{antismash_output_current_dir}/gbks' already exists.")
+    sys.exit()
 
-    antismash_annot_metadata = antismash_annot_parser(input_dir = f'{antismash_output_current_dir}/gbks',
-                                                      sample_name = sample_name,
-                                                      input_fasta = input_sample)
+for gbk in antismash_output_gbks:
+        shutil.move(gbk, f'{antismash_output_current_dir}/gbks')
 
-    if antismash_annot_metadata is not None:
-        antismash_annot_metadata_tsv = f'{output_tables_dir}/antismash_annot_metadata.tsv'
-        antismash_annot_metadata.to_csv(antismash_annot_metadata_tsv, sep='\t', index=False)
-    else:
-        antismash_annot_metadata_tsv = None
+antismash_annot_metadata = utilities.antismash_annot_parser(input_dir = f'{antismash_output_current_dir}/gbks',
+                                                            sample_name = sample_name,
+                                                            input_fasta = input_sample)
+
+if antismash_annot_metadata is not None:
+    antismash_annot_metadata_tsv = f'{bgc_annot_inter_antismash_dir}/antismash_annot_metadata.tsv'
+    antismash_annot_metadata.to_csv(antismash_annot_metadata_tsv, sep='\t', index=False)
+else:
+    antismash_annot_metadata_tsv = None
