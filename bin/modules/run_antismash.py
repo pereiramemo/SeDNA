@@ -35,7 +35,7 @@ parser.add_argument("--taxon", default = "bacteria", help="antiSMASH - {bacteria
 parser.add_argument("--genefinding_tool", default = "prodigal-m", help="antiSMASH {glimmerhmm,prodigal,prodigal-m,none,error} Specify algorithm used for gene finding: GlimmerHMM, Prodigal, Prodigal Metagenomic/Anonymous mode, or none. The 'error' option will raise an error if genefinding is attempted. The 'none' option will not run genefinding.")
 parser.add_argument("--minlength", default = 1000, help="antiSMASH - Only process sequences larger than <minlength>")
 
-# Get general paramteres
+# Get general parameters
 args = parser.parse_args()
 input_sample = args.input_sample
 threads = args.threads
@@ -76,7 +76,7 @@ if args.overwrite and os.path.exists(output_dir):
         sys.exit(1)
 
 ###############################################################################
-#### 4.1 bgc_annot/inter/ output dir
+#### 4.2 bgc_annot/inter/ output dir
 ###############################################################################
 
 bgc_annot_inter_dir = f"{output_dir}/bgc_annot/inter"
@@ -102,7 +102,7 @@ if not os.path.exists(bgc_annot_sorted_dir):
         sys.exit(1)
 
 ###############################################################################
-## 5.Create antismash output dir
+## 4.4. antismash output dir
 ###############################################################################
 
 # create inter output
@@ -114,11 +114,10 @@ except Exception as e:
     sys.exit(1)
 
 ###############################################################################
-## 6. Run BGC annotation with antismash
+## 5. Run BGC annotation with antismash
 ###############################################################################
 
-    
-# # run command
+# run command
 current_directory = os.getcwd()
 antismash_output_current_dir = bgc_annot_inter_antismash_dir
 
@@ -146,7 +145,7 @@ else:
     sys.exit()
 
 ###############################################################################
-#### 6 anitsmash BGC metadata
+#### 6 antismash BGC metadata
 ###############################################################################
 
 # find all antismash GBK output files 
