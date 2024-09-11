@@ -13,6 +13,7 @@ AVAILABLE_MODULES=(
 "run_antismash"
 "run_deepbgc"
 "run_gecco"
+"run_all"
 "dereplicate"
 "cluster_bgcs"
 )
@@ -88,12 +89,20 @@ case "${MODULE}" in
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/gecco_env
         "${BIN_DIRECTORY}/modules/run_gecco.py" $PARAMS
         ;;
+    "run_all")
+        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/antismash_env
+        "${BIN_DIRECTORY}/modules/run_antismash.py" $PARAMS
+        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/deepbgc_env
+        "${BIN_DIRECTORY}/modules/run_deepbgc.py" $PARAMS
+        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/gecco_env
+        "${BIN_DIRECTORY}/modules/run_gecco.py" $PARAMS
+        ;;
     "dereplicate")
-        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/dereplicate_env
+        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/bgcminer_env
         "${BIN_DIRECTORY}/modules/dereplicate.py" $PARAMS
         ;;
     "cluster_bgcs")
-        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/cluster_bgcs_env
+        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/bgcminer_env
         "${BIN_DIRECTORY}/modules/cluster_bgcs.py" $PARAMS
         ;;
 esac        
