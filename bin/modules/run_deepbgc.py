@@ -165,18 +165,19 @@ if len(deepbgc_output_gbk) == 1:
                            sample_name = sample_name)
 
     # Filter deebBGC outputs with low score
-    
     utilities.gbk_filter(input_dir = f'{bgc_annot_inter_deepbgc_dir}/gbks',
                          sample_name = sample_name,
                          deepbgc_score_thres = deepbgc_score_thres,
                          deepbgc_cds_count_thres = deepbgc_cds_count_thres,
                          output_dir = f'{bgc_annot_inter_deepbgc_dir}/gbks_removed')
 
+# Get metadata
 deepbgc_annot_metadata = utilities.deepbgc_annot_parser(input_dir = f'{bgc_annot_inter_deepbgc_dir}/gbks',
                                                         sample_name = sample_name,
                                                         input_fasta = input_sample)
 
 
+# Export metadata
 if deepbgc_annot_metadata is not None:
     deepbgc_annot_metadata_tsv = f'{bgc_annot_inter_deepbgc_dir}/deepbgc_annot_metadata.tsv'
     deepbgc_annot_metadata.to_csv(deepbgc_annot_metadata_tsv, sep='\t', index=False)

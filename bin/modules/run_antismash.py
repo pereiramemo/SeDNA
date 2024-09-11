@@ -164,11 +164,13 @@ except FileExistsError:
 
 for gbk in antismash_output_gbks:
         shutil.move(gbk, f'{bgc_annot_inter_antismash_dir}/gbks')
-
+        
+# Get metadata
 antismash_annot_metadata = utilities.antismash_annot_parser(input_dir = f'{bgc_annot_inter_antismash_dir}/gbks',
                                                             sample_name = sample_name,
                                                             input_fasta = input_sample)
 
+# Export metadata
 if antismash_annot_metadata is not None:
     antismash_annot_metadata_tsv = f'{bgc_annot_inter_antismash_dir}/antismash_annot_metadata.tsv'
     antismash_annot_metadata.to_csv(antismash_annot_metadata_tsv, sep='\t', index=False)
