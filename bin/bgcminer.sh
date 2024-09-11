@@ -9,6 +9,8 @@ CONDA_ENVS_PATH=${CONDA_ENVS_PATH:-"${CONDA_BASE}/envs/"}
 BIN_DIRECTORY=$(dirname $0)
 PARAMS="--help"
 
+echo "${CONDA_ENVS_PATH}"
+
 AVAILABLE_MODULES=(
 "run_antismash"
 "run_deepbgc"
@@ -54,7 +56,7 @@ while true; do
             exit 0
             ;;
         -h|--help)
-            show_help
+            usage
             ;;
         --)
             shift
