@@ -26,7 +26,7 @@ def create_links(input_dict: str = None,
             source_path = os.path.relpath(source_dir, output_dir)
             target_path = f'{output_dir}/{bgc_id_str}.gbk'
 
-            if not os.path.exists(source_path):
+            if not os.path.exists(source_dir):
                 print("File paths in metadata table do not exist")
                 sys.exit()
 
@@ -82,7 +82,7 @@ def create_df(input_dict: str = None,
             output_df = pd.concat([output_df, input_as_row], ignore_index=True)
 
     # write dereplicated annot_metadata DF
-    output_tsv = f'{output_dir}/metadata_annot.tsv'
+    output_tsv = f'{output_dir}/annot_metadata.tsv'
     if df == True:
         return(output_df)
     if tsv == True: 

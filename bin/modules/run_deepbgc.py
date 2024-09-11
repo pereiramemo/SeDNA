@@ -179,7 +179,7 @@ deepbgc_annot_metadata = utilities.deepbgc_annot_parser(input_dir = f'{bgc_annot
 
 # Export metadata
 if deepbgc_annot_metadata is not None:
-    deepbgc_annot_metadata_tsv = f'{bgc_annot_inter_deepbgc_dir}/deepbgc_annot_metadata.tsv'
+    deepbgc_annot_metadata_tsv = f'{bgc_annot_inter_deepbgc_dir}/annot_metadata.tsv'
     deepbgc_annot_metadata.to_csv(deepbgc_annot_metadata_tsv, sep='\t', index=False)
 else:
     deepbgc_annot_metadata_tsv = None

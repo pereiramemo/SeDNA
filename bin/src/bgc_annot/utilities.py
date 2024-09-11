@@ -262,28 +262,28 @@ def gbk_filter(input_dir : str = None, sample_name : str = None,
         sys.exit(1)
 
     paths2gbk = find_files(input_dir = input_dir, 
-                        pattern = f"{sample_name}.*region.*.gbk")
-    
+                           pattern = f".*region.*.gbk")
     for input_gbk in paths2gbk:
         with open(input_gbk, "r") as gbk_handle:
             record = SeqIO.read(gbk_handle, "genbank")
-            
+
             # get deepbgc score
             deepbgc_score = get_features(record = record, 
                                          feature_name = "cluster",
                                          qualifier_name = "deepbgc_score")
             deepbgc_score = float(deepbgc_score)
-            
+
             # count number of CDS
             cds_count = count_cds(record = record)
             
-            # filter 
+            # Remove low confidence BGCs
             if deepbgc_score < deepbgc_score_thres or cds_count < deepbgc_cds_count_thres:
-                shutil.move(input_gbk, output_dir)
+                shutil.move(input_gbk, output_dir) 
 
 '''
 Description
-
+This function was exclusively designed to filter out BGC sequences identified with deepBGC having a low score or number of biosynthetic CDSs.
+The input directory must contain BGC sequences having the antiSMASH file naming (i.e., .*region.*.gbk"); however, this could be easily adjusted to admit any format names. Low confidence BGCs are moved from input to the output directory.
 '''
 
 ###############################################################################
@@ -513,8 +513,10 @@ def gecco_annot_parser(input_dir: str = None, sample_name: str = None,
             match = re.search(pattern, acc)
             extracted_number = int(match.group(1))
             acc_renamed = re.sub(r'_cluster_\d+','.region{:03d}'.format(extracted_number), acc)
-            input_gbk_list = find_files(input_dir = input_dir, pattern = f'{acc_renamed}.gbk')
+            input_gbk_dir = os.path.join(os.path.dirname(input_dir),"gbks")
+            input_gbk_list = find_files(input_dir = input_gbk_dir, pattern = f'{acc_renamed}.gbk')
             input_gbk = input_gbk_list[0]
+            input_gbk = os.path.abspath(input_gbk)
             # create output dict
             acc2x[acc_i] = {"acc": acc, "bgc_class":bgc_class, \
                             "start":start, "end":end, "length":length, \

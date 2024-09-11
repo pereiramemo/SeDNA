@@ -1,7 +1,7 @@
 ###############################################################################
 ## Function dereplicate_shared_contigs
 ###############################################################################
-                              
+
 def dereplicate_shared_contigs(metadata_df1: str = None, 
                                metadata_df2: str = None,
                                dereplicated_bgcs: str = None,

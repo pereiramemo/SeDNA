@@ -164,7 +164,7 @@ gecco_annot_metadata = utilities.gecco_annot_parser(input_dir = bgc_annot_inter_
                                                     input_fasta = input_sample)
 # Export metadata 
 if gecco_annot_metadata is not None:
-    gecco_annot_metadata_tsv = f'{bgc_annot_inter_gecco_dir}/gecco_annot_metadata.tsv'
+    gecco_annot_metadata_tsv = f'{bgc_annot_inter_gecco_dir}/annot_metadata.tsv'
     gecco_annot_metadata.to_csv(gecco_annot_metadata_tsv, sep='\t', index=False)
 else:
     gecco_annot_metadata_tsv = None

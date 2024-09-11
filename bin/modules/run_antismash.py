@@ -172,7 +172,7 @@ antismash_annot_metadata = utilities.antismash_annot_parser(input_dir = f'{bgc_a
 
 # Export metadata
 if antismash_annot_metadata is not None:
-    antismash_annot_metadata_tsv = f'{bgc_annot_inter_antismash_dir}/antismash_annot_metadata.tsv'
+    antismash_annot_metadata_tsv = f'{bgc_annot_inter_antismash_dir}/annot_metadata.tsv'
     antismash_annot_metadata.to_csv(antismash_annot_metadata_tsv, sep='\t', index=False)
 else:
     antismash_annot_metadata_tsv = None
