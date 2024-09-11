@@ -113,14 +113,18 @@ except Exception as e:
     print(f"Error: {e}")
     sys.exit(1)
 
+bgc_annot_inter_antismash_output_dir = f"{bgc_annot_inter_antismash_dir}/output"
+try:
+    os.makedirs(bgc_annot_inter_antismash_output_dir)
+except Exception as e:
+    print(f"Error: {e}")
+    sys.exit(1)
+
 ###############################################################################
 ## 5. Run BGC annotation with antismash
 ###############################################################################
 
 # run command
-current_directory = os.getcwd()
-antismash_output_current_dir = bgc_annot_inter_antismash_dir
-
 command_antismash = f"antismash \
                        --cpus {threads} \
                        --genefinding-tool {genefinding_tool} \
@@ -128,7 +132,7 @@ command_antismash = f"antismash \
                        --allow-long-headers \
                        --minlength {minlength} \
                        --minimal \
-                       --output-dir {antismash_output_current_dir}  \
+                       --output-dir {bgc_annot_inter_antismash_output_dir}  \
                         {input_sample}" 
 
 result_antismash = subprocess.run(command_antismash, 
@@ -149,19 +153,19 @@ else:
 ###############################################################################
 
 # find all antismash GBK output files 
-antismash_output_gbks = utilities.find_files(input_dir = antismash_output_current_dir,
+antismash_output_gbks = utilities.find_files(input_dir = bgc_annot_inter_antismash_output_dir,
                                              pattern = ".*.region.*.gbk")
 
 try:
-    os.makedirs(f'{antismash_output_current_dir}/gbks')
+    os.makedirs(f'{bgc_annot_inter_antismash_dir}/gbks')
 except FileExistsError:
-    print(f"Directory '{antismash_output_current_dir}/gbks' already exists.")
+    print(f"Directory '{bgc_annot_inter_antismash_dir}/gbks' already exists.")
     sys.exit()
 
 for gbk in antismash_output_gbks:
-        shutil.move(gbk, f'{antismash_output_current_dir}/gbks')
+        shutil.move(gbk, f'{bgc_annot_inter_antismash_dir}/gbks')
 
-antismash_annot_metadata = utilities.antismash_annot_parser(input_dir = f'{antismash_output_current_dir}/gbks',
+antismash_annot_metadata = utilities.antismash_annot_parser(input_dir = f'{bgc_annot_inter_antismash_dir}/gbks',
                                                             sample_name = sample_name,
                                                             input_fasta = input_sample)
 

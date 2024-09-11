@@ -110,22 +110,26 @@ try:
 except Exception as e:
     print(f"Error: {e}")
     sys.exit(1)
+    
+bgc_annot_inter_deepbgc_output_dir = f"{bgc_annot_inter_deepbgc_dir}/output"
+try:
+    os.makedirs(bgc_annot_inter_deepbgc_output_dir)
+except Exception as e:
+    print(f"Error: {e}")
+    sys.exit(1)
 
 ###############################################################################
 ## 5. Run BGC annotation with deepbgc
 ###############################################################################
 
 # run command
-current_directory = os.getcwd()
-deepbgc_output_current_dir = bgc_annot_inter_deepbgc_dir
-
 command_deepbgc = f"deepbgc pipeline \
                   --detector deepbgc \
                   --classifier product_class \
                   --prodigal-meta-mode \
                   --classifier-score {deepbgc_score_thres} \
                   --min-domains {deepbgc_cds_count_thres} \
-                  --output {deepbgc_output_current_dir}  \
+                  --output {bgc_annot_inter_deepbgc_output_dir} \
                   {input_sample}" 
 
 result_deepbgc = subprocess.run(command_deepbgc, 
@@ -146,8 +150,9 @@ else:
 ###############################################################################
 
 # find the sinlge GBK output file from deepBGC
-deepbgc_output_gbk = utilities.find_files(input_dir = deepbgc_output_current_dir, 
-                                pattern = ".bgc.gbk")
+deepbgc_output_gbk = utilities.find_files(input_dir = bgc_annot_inter_deepbgc_output_dir, 
+                                          pattern = ".bgc.gbk")
+
 if len(deepbgc_output_gbk) > 1:
     print("Error message:\nMore than one deepBGC GBK file output found\nThere should be only one.")
     print(deepbgc_output_gbk)
@@ -156,23 +161,24 @@ if len(deepbgc_output_gbk) > 1:
 if len(deepbgc_output_gbk) == 1:
     # split multiple GBK into different files
     utilities.gbk_splitter(input_file = deepbgc_output_gbk[0],
-                           output_dir = f'{deepbgc_output_current_dir}/gbks', 
+                           output_dir = f'{bgc_annot_inter_deepbgc_dir}/gbks', 
                            sample_name = sample_name)
 
     # Filter deebBGC outputs with low score
-    utilities.gbk_filter(input_dir = f'{deepbgc_output_current_dir}/gbks',
+    
+    utilities.gbk_filter(input_dir = f'{bgc_annot_inter_deepbgc_dir}/gbks',
                          sample_name = sample_name,
                          deepbgc_score_thres = deepbgc_score_thres,
                          deepbgc_cds_count_thres = deepbgc_cds_count_thres,
-                         output_dir = f'{deepbgc_output_current_dir}/gbks_filtered')
+                         output_dir = f'{bgc_annot_inter_deepbgc_dir}/gbks_removed')
 
-deepbgc_annot_metadata = utilities.deepbgc_annot_parser(input_dir = f'{deepbgc_output_current_dir}/gbks',
+deepbgc_annot_metadata = utilities.deepbgc_annot_parser(input_dir = f'{bgc_annot_inter_deepbgc_dir}/gbks',
                                                         sample_name = sample_name,
                                                         input_fasta = input_sample)
 
 
 if deepbgc_annot_metadata is not None:
-    deepbgc_annot_metadata_tsv = f'{deepbgc_output_current_dir}/deepbgc_annot_metadata.tsv'
+    deepbgc_annot_metadata_tsv = f'{bgc_annot_inter_deepbgc_dir}/deepbgc_annot_metadata.tsv'
     deepbgc_annot_metadata.to_csv(deepbgc_annot_metadata_tsv, sep='\t', index=False)
 else:
     deepbgc_annot_metadata_tsv = None
