@@ -20,8 +20,8 @@ from bgc_annot import utilities
 ## 2. Parse input data and optional arguments
 ###############################################################################
 
-parser = argparse.ArgumentParser(prog='run_gecco.py', \
-                                 description='Annotates BGC sequences utilizing the gecco tool')
+parser = argparse.ArgumentParser(prog='run_deepbgc.py', \
+                                 description='Annotates BGC sequences utilizing the deepBGC tool')
 
 # general parameters
 parser.add_argument("--input_sample", help="Input fasta file.")
@@ -29,6 +29,10 @@ parser.add_argument("--threads", default = 4, help="Number of threads.")
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
 parser.add_argument("--output_dir", help="Output directory.")
 parser.add_argument("--overwrite", action="store_true", help="Ovewrite output directory.")
+# deepBGC parameters
+parser.add_argument("--deepbgc_score_thres", default = 0.75, help = "Threshold value to filter out deepBGC annotated BGC sequences.")
+parser.add_argument("--deepbgc_cds_count_thres", default = 2, help = "Threshold number of CDS to filter out deepBGC annotated BGC sequences.")
+
 
 # Get general parameters
 args = parser.parse_args()
@@ -37,12 +41,16 @@ threads = args.threads
 output_dir = args.output_dir
 sample_name = args.sample_name
 
+# Get deepBGC parameters
+deepbgc_score_thres = float(args.deepbgc_score_thres)
+deepbgc_cds_count_thres = int(args.deepbgc_cds_count_thres)
+
 ###############################################################################
 ## 3. Sanity checks and initializations
 ###############################################################################
 
 # set metadata file names
-gecco_annot_metadata_tsv = None
+deepbgc_annot_metadata_tsv = None
 
 ###############################################################################
 #### 4 Create output dirs
@@ -92,70 +100,79 @@ if not os.path.exists(bgc_annot_sorted_dir):
         sys.exit(1)
 
 ###############################################################################
-## 4.4. gecco output dir
+## 4.4. deepbgc output dir
 ###############################################################################
 
 # create inter output
-bgc_annot_inter_gecco_dir = f"{bgc_annot_inter_dir}/gecco"
+bgc_annot_inter_deepbgc_dir = f"{bgc_annot_inter_dir}/deepbgc"
 try:
-    os.makedirs(bgc_annot_inter_gecco_dir)
+    os.makedirs(bgc_annot_inter_deepbgc_dir)
 except Exception as e:
     print(f"Error: {e}")
     sys.exit(1)
 
 ###############################################################################
-## 5. Run BGC annotation with gecco
+## 5. Run BGC annotation with deepbgc
 ###############################################################################
 
 # run command
 current_directory = os.getcwd()
-gecco_output_current_dir = bgc_annot_inter_gecco_dir
+deepbgc_output_current_dir = bgc_annot_inter_deepbgc_dir
 
-command_gecco = f"gecco run \
-                   --genome {input_sample} \
-                   --jobs {threads} \
-                   --output-dir {gecco_output_current_dir}"
+command_deepbgc = f"deepbgc pipeline \
+                  --detector deepbgc \
+                  --classifier product_class \
+                  --prodigal-meta-mode \
+                  --classifier-score {deepbgc_score_thres} \
+                  --min-domains {deepbgc_cds_count_thres} \
+                  --output {deepbgc_output_current_dir}  \
+                  {input_sample}" 
 
-result_gecco = subprocess.run(command_gecco, 
-                              shell=True, 
-                              stdout=subprocess.PIPE, 
-                              stderr=subprocess.PIPE, 
-                              text=True)
+result_deepbgc = subprocess.run(command_deepbgc, 
+                                  shell=True, 
+                                  stdout=subprocess.PIPE, 
+                                  stderr=subprocess.PIPE, 
+                                  text=True)
 
-if result_gecco.returncode == 0:
-    print("gecco executed successfully")
+if result_deepbgc.returncode == 0:
+    print("deepBGC executed successfully")
 else:
-    print("Error executing gecco")
-    print("Error message:\n", result_gecco.stderr)
+    print("Error executing deepBGC")
+    print("Error message:\n", result_deepbgc.stderr)
     sys.exit()
 
 ###############################################################################
-#### 6. gecco BGC metadata
+#### 6 deepBGC BGC metadata
 ###############################################################################
 
-# copy all gecco output gbk files into a gbk folder and rename these following \
-# the format region*.gbk (as antiSMASH).
-gecco_gbk_list = utilities.find_files(input_dir =  gecco_output_current_dir, 
-                            pattern = r'.cluster_[0-9]+.gbk')
+# find the sinlge GBK output file from deepBGC
+deepbgc_output_gbk = utilities.find_files(input_dir = deepbgc_output_current_dir, 
+                                pattern = ".bgc.gbk")
+if len(deepbgc_output_gbk) > 1:
+    print("Error message:\nMore than one deepBGC GBK file output found\nThere should be only one.")
+    print(deepbgc_output_gbk)
+    sys.exit() 
 
-if not os.path.exists(f'{gecco_output_current_dir}/gbks'):
-    os.makedirs(f'{gecco_output_current_dir}/gbks')
+if len(deepbgc_output_gbk) == 1:
+    # split multiple GBK into different files
+    utilities.gbk_splitter(input_file = deepbgc_output_gbk[0],
+                           output_dir = f'{deepbgc_output_current_dir}/gbks', 
+                           sample_name = sample_name)
 
-for file_path in gecco_gbk_list:
-    file = os.path.basename(file_path)
-    pattern = r'_cluster_(\d+)\.gbk'
-    match = re.search(pattern, file)
-    number = int(match.group(1))
-    file_renamed = re.sub(r'_cluster_\d+.gbk','.region{:03d}.gbk'.format(number), file)
-    file_path_renamed = os.path.join(f'{gecco_output_current_dir}/gbks', file_renamed)
-    shutil.copy(file_path, file_path_renamed)
+    # Filter deebBGC outputs with low score
+    utilities.gbk_filter(input_dir = f'{deepbgc_output_current_dir}/gbks',
+                         sample_name = sample_name,
+                         deepbgc_score_thres = deepbgc_score_thres,
+                         deepbgc_cds_count_thres = deepbgc_cds_count_thres,
+                         output_dir = f'{deepbgc_output_current_dir}/gbks_filtered')
 
-gecco_annot_metadata = utilities.gecco_annot_parser(input_dir = f'{gecco_output_current_dir}',
-                                                    sample_name = sample_name,
-                                                    input_fasta = input_sample)
+deepbgc_annot_metadata = utilities.deepbgc_annot_parser(input_dir = f'{deepbgc_output_current_dir}/gbks',
+                                                        sample_name = sample_name,
+                                                        input_fasta = input_sample)
 
-if gecco_annot_metadata is not None:
-    gecco_annot_metadata_tsv = f'{gecco_output_current_dir}/gecco_annot_metadata.tsv'
-    gecco_annot_metadata.to_csv(gecco_annot_metadata_tsv, sep='\t', index=False)
+
+if deepbgc_annot_metadata is not None:
+    deepbgc_annot_metadata_tsv = f'{deepbgc_output_current_dir}/deepbgc_annot_metadata.tsv'
+    deepbgc_annot_metadata.to_csv(deepbgc_annot_metadata_tsv, sep='\t', index=False)
 else:
-    gecco_annot_metadata_tsv = None
+    deepbgc_annot_metadata_tsv = None
