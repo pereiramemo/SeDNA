@@ -707,3 +707,46 @@ The main modifications are including the “product”, “region_numnber”, an
 Another relevant modification is that the `LOCUS` field is modified to have as a name the contig_id (in the case of deepBGC and gecco).
 The code was adapted from a script provided by BiG-SLICE, to generate antiSMASH-like BGC sequences.
 '''
+
+###############################################################################
+# 12. extract_cds
+###############################################################################
+
+def extract_cds(input_gbk: str = None, cds_id: str = 'locus_tag', output_fasta: str = None):
+    '''
+    input_gbk:
+        Path to input GenBank file.
+    gene_id:
+        Key to be used as CDS id. 
+    output_fasta:
+        Path to output fasta file.
+    '''
+    
+    cds_sequences = []
+    with open(input_gbk, "r") as gb_handle:
+        for record in SeqIO.parse(gb_handle, "genbank"):
+            acc = record.annotations['accessions'][0]
+            cds_n = 1
+            for feature in record.features:
+                if feature.type == "CDS":
+                    # Extract CDS sequence and add it to the list
+                    if feature.qualifiers.get(cds_id) is not None:
+                        cds_id_instance = feature.qualifiers[cds_id][0]
+                    else:    
+                        cds_id_instance = f'{cds_id}-notfound'
+                        
+                    coords_start = feature.location.start
+                    coords_end = feature.location.end
+                    cds_header = f"{cds_id_instance}|{coords_start}-{coords_end}|{cds_n}"
+                    cds_sequences.append((cds_header, feature.qualifiers['translation'][0]))
+                    cds_n += 1
+    
+    # Write all CDS sequences to the output multi-FASTA file
+    with open(output_fasta, "w") as fasta_handle:
+        for gene_name, sequence in cds_sequences:
+            fasta_handle.write(f">{acc}|{gene_name}\n")
+            fasta_handle.write(f"{sequence}\n")
+            
+'''
+Description            
+The function `extract_cds` takes as an input a GenBank file, searches and extracts the CDS, and generates a multi fasta file as an output with the CDS.     '''    

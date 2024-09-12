@@ -15,7 +15,8 @@ AVAILABLE_MODULES=(
 "run_gecco"
 "run_all"
 "dereplicate"
-"cluster_bgcs"
+"annot_cds"
+"cluster"
 )
 
 usage() {
@@ -101,8 +102,12 @@ case "${MODULE}" in
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/bgcminer_env
         "${BIN_DIRECTORY}/modules/dereplicate.py" $PARAMS
         ;;
-    "cluster_bgcs")
+    "annot_cds")
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/bgcminer_env
-        "${BIN_DIRECTORY}/modules/cluster_bgcs.py" $PARAMS
+        "${BIN_DIRECTORY}/modules/annot_cds.py" $PARAMS
+        ;;    
+    "cluster")
+        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/bgcminer_env
+        "${BIN_DIRECTORY}/modules/cluster.py" $PARAMS
         ;;
 esac        
