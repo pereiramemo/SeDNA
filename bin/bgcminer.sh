@@ -69,7 +69,7 @@ while true; do
     esac
 done
 
-# Check in module is valid and non empty
+# Check if module is valid and non empty
 TEST_MODULE_FLAG=0
 for AVAILABLE_MODULE in "${AVAILABLE_MODULES[@]}"; do
     if [[ "${AVAILABLE_MODULE}" == "${MODULE}" ]]; then
