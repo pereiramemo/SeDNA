@@ -63,7 +63,7 @@ for file in matching_files:
 bgc_embeddings = {}
 for bgc in bgc_domains:
   
-    # deduplicate ements in list
+    # deduplicate elements in list
     bgc_domains[bgc] = list(dict.fromkeys(bgc_domains[bgc]))
     # initialize list of embeddings
     bgc_embeddings[bgc] = []
