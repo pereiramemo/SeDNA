@@ -21,14 +21,17 @@ parser = argparse.ArgumentParser(prog='cluster.py', \
 # general parameters
 parser.add_argument("--input_sample", help="Input fasta file.")
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
-parser.add_argument("--output_dir", help="Output directory.")
+parser.add_argument("--threshold", default = 1, help="BIRCH clustering threshold")
+parser.add_argument("--output_tsv", help="Output directory.")
 parser.add_argument("--overwrite", action="store_true", help="Overwrite output directory.")
 
 # Get general parameters
 args = parser.parse_args()
 input_sample = args.input_sample
-output_dir = args.output_dir
 sample_name = args.sample_name
+threshold = args.threshold
+output_tsv = args.output_tsv
+overwrite = args.overwrite
 
 ###############################################################################
 ## 3. Load data
@@ -46,7 +49,6 @@ for root, dirs, files in os.walk(input_dir):
     for file in files:
         if re.search(".*_annotdoms_resolved.tsv", file):
             matching_files.append(os.path.join(root, file))
-
 
 # Load BGCs
 bgc_domains = {}
@@ -93,6 +95,27 @@ df_bgc_embeddings_mean = pd.DataFrame(bgc_embeddings_mean).T
 ## 7. Cluster BGCs
 ###############################################################################
 
-brc = Birch(branching_factor=5, n_clusters=None, 
-            threshold=0.5, compute_labels=True)
-brc.fit(df_bgc_embeddings_mean)
+birch = Birch(
+            n_clusters=None,  
+            compute_labels=False, 
+            copy=False 
+        )
+        
+birch.threshold = threshold
+
+birch.branching_factor = df_bgc_embeddings_mean.shape[0]
+birch.fit(df_bgc_embeddings_mean)
+brc_cluster = birch.predict(df_bgc_embeddings_mean)
+
+###############################################################################
+## 8. Export clustering
+###############################################################################
+
+bgc_ids = df_bgc_embeddings_mean.index
+
+output_df = pd.DataFrame({
+    'bgc_id': bgc_ids,
+    'cluster_id': brc_cluster
+})
+
+output_df.to_csv(output_tsv, sep='\t', index=False)
