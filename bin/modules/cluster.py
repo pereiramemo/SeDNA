@@ -20,13 +20,12 @@ from bgc_derep import dsc, dnsc, outputs
 # 2. Parse parameters
 ################################################################################
 
-parser = argparse.ArgumentParser(prog='dereplicate_bgcs.py', 
-                                 description='Dereplicate BGCs annotated with different tools.')
+parser = argparse.ArgumentParser(prog='dereplicate_bgcs.py', description='Dereplicate BGCs annotated with different tools.')
 parser.add_argument("--input_dir", default = None, help = "The input directory having the metadata tables (tsv) generated with the run_* modules.")
 parser.add_argument("--overlap_thres", default = "0.75", 
                     help="Percentage of overlap (in relation to longest BGCs) to determine if two BGCs are overlapped or partially overlapped.")
 parser.add_argument("--metadata", default = None, help="Comma separated list of tsv tables containing the metadata of annotated BGCs.")
-parser.add_argument("--overwrite", action="store_true", help="Overwrite output directory.")
+parser.add_argument("--overwrite", action="store_true", help="Ovewrite output directory.")
 parser.add_argument("--output_dir", help = "The output directory where non-overlapped, partially overlapped and overlapped BGCs sequences and metadata tables (tsv).")
 
 args = parser.parse_args()
@@ -134,7 +133,7 @@ def recursive_dereplication(metadata: list =  None,
         dereplicated_bgcs = output_non_shared_contigs['dereplicated_bgcs']
         non_overlapped_bgcs = output_non_shared_contigs['non_overlapped_bgcs']
         
-        ## Update metadata
+        ## Updata metadata
         metadata = metadata[next_i: ]
         output_dir_dereplicated = f'{output_dir}/dereplicated'
         metadata_dereplicated_bgc = outputs.create_df(input_dict = dereplicated_bgcs, 

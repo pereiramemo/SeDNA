@@ -21,14 +21,14 @@ from bgc_annot import utilities
 ###############################################################################
 
 parser = argparse.ArgumentParser(prog='run_gecco.py', \
-                                 description='Annotates BGC sequences utilizing the gecco tool')
+                                 description='Annotates BGC sequences utilizing the gecco tool.')
 
 # general parameters
 parser.add_argument("--input_sample", help="Input fasta file.")
 parser.add_argument("--threads", default = 4, help="Number of threads.")
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
 parser.add_argument("--output_dir", help="Output directory.")
-parser.add_argument("--overwrite", action="store_true", help="Ovewrite output directory.")
+parser.add_argument("--overwrite", action="store_true", help="Overwrite output directory.")
 
 # Get general parameters
 args = parser.parse_args()

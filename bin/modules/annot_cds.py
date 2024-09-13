@@ -23,20 +23,21 @@ cath_resolve_hits="/home/ec2-user/SageMaker/efs/sandbox/sandbox/development/eper
 ################################################################################
 
 parser = argparse.ArgumentParser(prog='cds_annot.py', \
-                                 description='Annotate CDS sequences')
+                                 description='Annotate CDS sequences with pyHMMER.')
 
 
-parser.add_argument("--input_dir", help="Input dir with GenBank files.")
-parser.add_argument("--pattern", default = ".*.gbk", help="Pattern of gbk files",)
-parser.add_argument("--cds_id", default = "locus_tag", help="Key to be used as CDS id",)
+parser.add_argument("--input_dir", help="Input directory with GenBank files.")
+parser.add_argument("--pattern", default = ".*.gbk", help="Pattern in GenBank file names.")
+parser.add_argument("--cds_id", default = "locus_tag", help="Key to be used as CDS ID.")
 parser.add_argument("--create_fasta", default = True, action=argparse.BooleanOptionalAction, help="True or False to create fasta files from CDSs.")
 parser.add_argument("--annotate", default = True, action=argparse.BooleanOptionalAction, help="True or False to perform the CDSs annotation using hmmsearch.")
 parser.add_argument("--resolve_doms", default = True, action=argparse.BooleanOptionalAction, help="Resolve domain structures using cath-resolve-hits.")
-parser.add_argument("--overwrite", default = False, action=argparse.BooleanOptionalAction, help="Ovewrite output directory.")
+parser.add_argument("--overwrite", default = False, action=argparse.BooleanOptionalAction, help="Overwrite output directory.")
 parser.add_argument("--hmm_db", default = "/home/ec2-user/SageMaker/efs/sandbox/sandbox/development/epereira/dev/bioprospecting_internal/resources/databases/Pfam-A.hmm", help="Path to HMMs database.")
-parser.add_argument("--evalue_thres", default = 1e-3, help="hmmsearch e-value threshold")
-parser.add_argument("--threads", default = 4, help="Number of threads to run hmmsearch")
-parser.add_argument("--output_dir", help="Output dir")
+parser.add_argument("--evalue_thres", default = 1e-3, help="hmmsearch - e-value threshold.")
+parser.add_argument("--cut_ga", default = True, help="hmmsearch - Use the gathering bitscores for sequence inclusion")
+parser.add_argument("--threads", default = 4, help="hmmsearch - Number of threads")
+parser.add_argument("--output_dir", help="Output directory.")
 
 args = parser.parse_args()
 input_dir = args.input_dir
@@ -49,6 +50,7 @@ overwrite = args.overwrite
 hmm_db = args.hmm_db
 evalue_thres = float(args.evalue_thres)
 threads = int(args.threads)
+cut_ga = args.cut_ga
 output_dir = args.output_dir
 
 ################################################################################
@@ -114,13 +116,22 @@ if annotate == True:
         fasta = f'{file}.fasta' 
         domtblout = f'{file}_domtblout.tsv'
         hmmout = f'{file}_hmmout.tsv'  
-        
-        with pyhmmer.plan7.HMMFile(hmm_db) as hmms:
-            with pyhmmer.easel.SequenceFile(fasta, digital=True) as seqs:
-                with open(domtblout, "wb") as output_file:
-                    for hits in pyhmmer.hmmer.hmmsearch(hmms, seqs, domE = evalue_thres, cpus = threads):
-                        hits.write(output_file, format = "domains", header = False)
-                       # for hit in hits.included:
+
+        if cut_ga is not True:
+            with pyhmmer.plan7.HMMFile(hmm_db) as hmms:
+                with pyhmmer.easel.SequenceFile(fasta, digital=True) as seqs:
+                    with open(domtblout, "wb") as output_file:
+                        for hits in pyhmmer.hmmer.hmmsearch(hmms, seqs, domE = evalue_thres, cpus = threads):
+                            hits.write(output_file, format = "domains", header = False)
+        else:
+            with pyhmmer.plan7.HMMFile(hmm_db) as hmms:
+                with pyhmmer.easel.SequenceFile(fasta, digital=True) as seqs:
+                    with open(domtblout, "wb") as output_file:
+                        for hits in pyhmmer.hmmer.hmmsearch(hmms, seqs, domE = evalue_thres, 
+                                                            bit_cutoffs="gathering", cpus = threads):
+                            hits.write(output_file, format = "domains", header = False)
+            
+            
                             
 ################################################################################
 # 7. Resolve domain structure

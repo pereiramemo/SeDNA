@@ -21,17 +21,17 @@ from bgc_annot import utilities
 ###############################################################################
 
 parser = argparse.ArgumentParser(prog='run_deepbgc.py', \
-                                 description='Annotates BGC sequences utilizing the deepBGC tool')
+                                 description='Annotates BGC sequences utilizing the deepBGC tool.')
 
 # general parameters
 parser.add_argument("--input_sample", help="Input fasta file.")
 parser.add_argument("--threads", default = 4, help="Number of threads.")
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
 parser.add_argument("--output_dir", help="Output directory.")
-parser.add_argument("--overwrite", action="store_true", help="Ovewrite output directory.")
+parser.add_argument("--overwrite", action="store_true", help="Overwrite output directory.")
 # deepBGC parameters
-parser.add_argument("--deepbgc_score_thres", default = 0.75, help = "Threshold value to filter out deepBGC annotated BGC sequences.")
-parser.add_argument("--deepbgc_cds_count_thres", default = 2, help = "Threshold number of CDS to filter out deepBGC annotated BGC sequences.")
+parser.add_argument("--deepbgc_score_thres", default = 0.75, help = "deepBGC - Threshold value to filter out deepBGC annotated BGC sequences.")
+parser.add_argument("--deepbgc_cds_count_thres", default = 2, help = "deepBGC - Threshold number of CDS to filter out deepBGC annotated BGC sequences.")
 
 
 # Get general parameters
@@ -149,7 +149,7 @@ else:
 #### 6 deepBGC BGC metadata
 ###############################################################################
 
-# find the sinlge GBK output file from deepBGC
+# find the single GBK output file from deepBGC
 deepbgc_output_gbk = utilities.find_files(input_dir = bgc_annot_inter_deepbgc_output_dir, 
                                           pattern = ".bgc.gbk")
 
@@ -164,7 +164,7 @@ if len(deepbgc_output_gbk) == 1:
                            output_dir = f'{bgc_annot_inter_deepbgc_dir}/gbks', 
                            sample_name = sample_name)
 
-    # Filter deebBGC outputs with low score
+    # Filter deepBGC outputs with low score
     utilities.gbk_filter(input_dir = f'{bgc_annot_inter_deepbgc_dir}/gbks',
                          sample_name = sample_name,
                          deepbgc_score_thres = deepbgc_score_thres,

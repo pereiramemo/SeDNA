@@ -21,19 +21,19 @@ from bgc_annot import utilities
 ###############################################################################
 
 parser = argparse.ArgumentParser(prog='run_antismash.py', \
-                                 description='Annotates BGC sequences utilizing the antiSMASH tool')
+                                 description='Annotates BGC sequences utilizing the antiSMASH tool.')
 
 # general parameters
 parser.add_argument("--input_sample", help="Input fasta file.")
 parser.add_argument("--threads", default = 4, help="Number of threads.")
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
 parser.add_argument("--output_dir", help="Output directory.")
-parser.add_argument("--overwrite", action="store_true", help="Ovewrite output directory.")
+parser.add_argument("--overwrite", action="store_true", help="Overwrite output directory.")
 
 # antiSMASH parameters
 parser.add_argument("--taxon", default = "bacteria", help="antiSMASH - {bacteria,fungi} Taxonomic classification of input sequence.")
 parser.add_argument("--genefinding_tool", default = "prodigal-m", help="antiSMASH {glimmerhmm,prodigal,prodigal-m,none,error} Specify algorithm used for gene finding: GlimmerHMM, Prodigal, Prodigal Metagenomic/Anonymous mode, or none. The 'error' option will raise an error if genefinding is attempted. The 'none' option will not run genefinding.")
-parser.add_argument("--minlength", default = 1000, help="antiSMASH - Only process sequences larger than <minlength>")
+parser.add_argument("--minlength", default = 1000, help="antiSMASH - Only process sequences larger than <minlength>.")
 
 # Get general parameters
 args = parser.parse_args()
