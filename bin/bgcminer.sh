@@ -70,7 +70,14 @@ while true; do
 done
 
 # Check in module is valid and non empty
-if [[ ! "${AVAILABLE_MODULES[@]}" =~ "${MODULE}" ]]; then
+TEST_MODULE_FLAG=0
+for AVAILABLE_MODULE in "${AVAILABLE_MODULES[@]}"; do
+    if [[ "${AVAILABLE_MODULE}" == "${MODULE}" ]]; then
+        TEST_MODULE_FLAG=1
+        break
+    fi        
+done    
+if [[ "${TEST_MODULE_FLAG}" == 0 ]]; then
     echo "Invalid or empty module name. Must be one of: ${AVAILABLE_MODULES[*]}"
     usage
     exit 1
