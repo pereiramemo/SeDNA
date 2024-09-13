@@ -61,12 +61,16 @@ for file in matching_files:
 # Map domains to embeddings
 bgc_embeddings = {}
 for bgc in bgc_domains:
+  
     bgc_embeddings[bgc] = []
+    # deduplicate ements in list
+    bgc_embeddings[bgc] = list(dict.fromkeys(bgc_embeddings[bgc]))
+    
     for domain in bgc_domains[bgc]:
         if domain in dom_embeddings:
             bgc_embeddings[bgc].append(dom_embeddings[domain])
-        else:
-            bgc_embeddings[bgc].append([0]*100) # if domain not in embeddings, add zeros
+        # else:
+        #     bgc_embeddings[bgc].append([0]*100) # if domain not in embeddings, add zeros
 
 ###############################################################################
 ## 5. Compute the mean embedding for each sample 
@@ -77,5 +81,3 @@ for bgc in bgc_embeddings:
     df_tmp = pd.DataFrame(bgc_embeddings[bgc]).T
     bgc_embeddings_mean[bgc] = df_tmp.mean(axis=1)
     
-
-
