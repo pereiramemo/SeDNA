@@ -19,7 +19,7 @@ parser = argparse.ArgumentParser(prog='cluster.py', \
                                  description='Cluster BGCs into GCFs.')
 
 # general parameters
-parser.add_argument("--input_sample", help="Input fasta file.")
+parser.add_argument("--input_dir", help="Input directory containing the .*_annotdoms_resolved.tsv files.")
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
 parser.add_argument("--threshold", default = 1, help="BIRCH clustering threshold")
 parser.add_argument("--output_tsv", help="Output directory.")
