@@ -52,7 +52,7 @@ while true; do
             ;;
         -v|--version)
             echo "Version:"
-            cat "${BIN_DIRECTORY}/bgcminer_version.txt"
+            cat "${BIN_DIRECTORY}/sedna_version.txt"
             exit 0
             ;;
         -h|--help)
