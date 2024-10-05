@@ -1,7 +1,7 @@
 # Bioprospecting-Internal
 Sedna is a bioinformatic pipeline dedicated to the bioprospecting analysis of Biosynthetic Gene Clusters in metagenomic data (see fig. 1 below).
 
-Sedna  
+#### **Sedna**  
 ![Figure 1: sedna workflow](https://github.com/new-atlantis-labs/Bioprospecting-Internal/blob/main/images/sedna.png)
 
 The tasks performed by Sedna are the following.  
