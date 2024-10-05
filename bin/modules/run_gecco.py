@@ -28,7 +28,7 @@ parser = argparse.ArgumentParser(prog='run_gecco.py', \
 parser.add_argument("--input_sample", help="Input fasta file.")
 parser.add_argument("--threads", default = 4, help="Number of threads.")
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
-parser.add_argument("--output_dir", help="Output directory.")
+parser.add_argument("--output_dir",  default = "sedna_output", help="Output directory.")
 parser.add_argument("--overwrite", action="store_true", help="Overwrite output directory.")
 
 # Get general parameters
@@ -80,20 +80,7 @@ if not os.path.exists(output_dir):
         sys.exit(1)
 
 ###############################################################################
-#### 4.3 bgc_annot/sorted/ output dir
-###############################################################################
-
-bgc_annot_sorted_dir = f"{output_dir}/bgc_annot/sorted"
-
-if not os.path.exists(bgc_annot_sorted_dir):
-    try:
-        os.makedirs(bgc_annot_sorted_dir)
-    except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
-
-###############################################################################
-## 4.4. gecco output dir
+## 4.5. gecco output dir
 ###############################################################################
 
 # create inter output
