@@ -12,8 +12,9 @@ import re
 import shutil
 from Bio import SeqIO
 
-current_dir = os.getcwd()
-sys.path.append(f'{current_dir}/src')
+current_dir = os.path.dirname(os.path.abspath(__file__))
+bin_dir = os.path.dirname(current_dir)
+sys.path.append(f'{bin_dir}/src')
 from bgc_annot import utilities
 
 ###############################################################################

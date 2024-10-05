@@ -12,8 +12,9 @@ import shutil
 import argparse
 import sys
 
-current_dir = os.getcwd()
-sys.path.append(f'{current_dir}/src')
+current_dir = os.path.dirname(os.path.abspath(__file__))
+bin_dir = os.path.dirname(current_dir)
+sys.path.append(f'{bin_dir}/src')
 from bgc_derep import dsc, dnsc, outputs 
 
 ################################################################################

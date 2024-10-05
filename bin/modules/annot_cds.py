@@ -12,8 +12,9 @@ import sys
 import shutil
 import pyhmmer
 
-current_dir = os.getcwd()
-sys.path.append(f'{current_dir}/src')
+current_dir = os.path.dirname(os.path.abspath(__file__))
+bin_dir = os.path.dirname(current_dir)
+sys.path.append(f'{bin_dir}/src')
 from bgc_annot import utilities
 
 cath_resolve_hits="/home/ec2-user/SageMaker/efs/sandbox/sandbox/development/epereira/bin/tools/cath-tools/cath-resolve-hits.ubuntu-20.04"
