@@ -1,1 +1,1 @@
-bgcminer 1.0.0
+sedna 1.0.0
