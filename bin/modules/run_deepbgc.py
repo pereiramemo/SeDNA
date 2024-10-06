@@ -28,7 +28,7 @@ parser = argparse.ArgumentParser(prog='run_deepbgc.py', \
 parser.add_argument("--input_sample", help="Input fasta file.")
 parser.add_argument("--threads", default = 4, help="Number of threads.")
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
-parser.add_argument("--output_dir",  default = "sedna_output",help="Output directory.")
+parser.add_argument("--output_dir", default = "sedna_output", help="Output directory.")
 parser.add_argument("--overwrite", action="store_true", help="Overwrite output directory.")
 # deepBGC parameters
 parser.add_argument("--deepbgc_score_thres", default = 0.75, help = "deepBGC - Threshold value to filter out deepBGC annotated BGC sequences.")
@@ -171,3 +171,15 @@ if deepbgc_annot_metadata is not None:
     deepbgc_annot_metadata.to_csv(deepbgc_annot_metadata_tsv, sep='\t', index=False)
 else:
     deepbgc_annot_metadata_tsv = None
+
+
+###############################################################################
+#### 7 Format deepBGC GBKs
+###############################################################################
+
+if deepbgc_annot_metadata_tsv is not None:
+    
+    utilities.format_gbks(input_dir = f'{bgc_annot_inter_deepbgc_dir}/gbks',
+                          input_tsv = deepbgc_annot_metadata_tsv,
+                          output_dir = f'{bgc_annot_inter_deepbgc_dir}/gbks',
+                          tool = "deepbgc")

@@ -98,23 +98,23 @@ case "${MODULE}" in
         "${BIN_DIRECTORY}/modules/run_gecco.py" $PARAMS
         ;;
     "run_all")
-        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/antismash_env
-        "${BIN_DIRECTORY}/modules/run_antismash.py" $PARAMS
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/deepbgc_env
         "${BIN_DIRECTORY}/modules/run_deepbgc.py" $PARAMS
+        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/antismash_env
+        "${BIN_DIRECTORY}/modules/run_antismash.py" $PARAMS
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/gecco_env
         "${BIN_DIRECTORY}/modules/run_gecco.py" $PARAMS
         ;;
     "dereplicate")
-        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/bgcminer_env
+        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_env
         "${BIN_DIRECTORY}/modules/dereplicate.py" $PARAMS
         ;;
     "annot_cds")
-        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/bgcminer_env
+        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_env
         "${BIN_DIRECTORY}/modules/annot_cds.py" $PARAMS
         ;;    
     "cluster")
-        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/bgcminer_env
+        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_env
         "${BIN_DIRECTORY}/modules/cluster.py" $PARAMS
         ;;
 esac        

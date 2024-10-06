@@ -37,8 +37,6 @@ def create_links(input_dict: str = None,
             except OSError as e:
                 print(f"Error creating symbolic link: {e}")
 
-       
-    
 ###############################################################################
 ## Function create_dfs
 ###############################################################################
@@ -47,6 +45,7 @@ def create_links(input_dict: str = None,
 
 def create_df(input_dict: str = None,
               output_dir: str = None,
+              output_dir_gbks: str = None,
               df = False,
               tsv = True):
 
@@ -71,7 +70,7 @@ def create_df(input_dict: str = None,
             input_as_row['bgc_id'] = bgc_id_str
 
             # Crate the link filed, contaitnig the link of the sequence
-            output_dir_path = os.path.abspath(output_dir)                
+            output_dir_path = os.path.abspath(output_dir_gbks)                
             link_name = f'{output_dir_path}/{bgc_id_str}.gbk'
             if not os.path.exists(link_name) and df == False:
                 print(f"Error in {link_name}. The file does not exists")

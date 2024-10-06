@@ -5,9 +5,11 @@
 ###############################################################################
 
 import argparse
-import pandas
+import pandas as pd
 import re
 import os
+import sys
+import shutil
 import pickle
 from sklearn.cluster import Birch
 
@@ -22,27 +24,46 @@ parser = argparse.ArgumentParser(prog='cluster.py', \
 parser.add_argument("--input_dir", help="Input directory containing the .*_annotdoms_resolved.tsv files.")
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
 parser.add_argument("--threshold", default = 1, help="BIRCH clustering threshold")
-parser.add_argument("--output_tsv", help="Output directory.")
+parser.add_argument("--output_tsv", default = "bgc_clust_output.tsv", help="Output clustering table (tsv).")
 parser.add_argument("--overwrite", action="store_true", help="Overwrite output directory.")
 
 # Get general parameters
 args = parser.parse_args()
-input_sample = args.input_sample
+input_dir = args.input_dir
 sample_name = args.sample_name
-threshold = args.threshold
+threshold = float(args.threshold)
 output_tsv = args.output_tsv
 overwrite = args.overwrite
 
 ###############################################################################
-## 3. Load data
+## 3. Check if output_tsv exists
+###############################################################################
+
+if os.path.exists(output_tsv) is True:
+    
+    if args.overwrite is False:
+        print(f'Output dir {output_tsv} already exists. Use --overwrite to overwrite')
+        sys.exit(0)
+    
+    if args.overwrite is True:
+        try:
+            shutil.rmtree(output_tsv)
+        except OSError as e:
+            print(f'Error: {e}')
+        
+###############################################################################
+## 4. Load data
 ###############################################################################
 
 # Load embeddings
-with open('results/embeddings/dom_embeddings_mtx_mibig_pfam.pkl', 'rb') as f:
+modules_dir = os.path.dirname(os.path.abspath(__file__))
+bin_dir = os.path.dirname(modules_dir)
+resources_dir = os.path.join(os.path.dirname(bin_dir), "resources")
+embeddings = os.path.join(resources_dir, "embeddings", "dom_embeddings_mtx_mibig_pfam.pkl")
+
+with open(embeddings, 'rb') as f:
     dom_embeddings = pickle.load(f)
-    
-# find annotdoms_resolved.tsv files
-input_dir = "/home/epereira/workspace/dev/new_atlantis/dev/clustering/data/export_testdata/"
+
 
 matching_files = []
 for root, dirs, files in os.walk(input_dir):
@@ -54,11 +75,11 @@ for root, dirs, files in os.walk(input_dir):
 bgc_domains = {}
 for file in matching_files:
     bgc = os.path.basename(file).replace("_annotdoms_resolved.tsv", "")
-    df_tmp = pandas.read_csv(file, sep=' ', comment='#', header=None)
+    df_tmp = pd.read_csv(file, sep=' ', comment='#', header=None)
     bgc_domains[bgc] = df_tmp.iloc[:, 1].tolist()
-
+    
 ###############################################################################
-## 4. Map domains to embeddings 
+## 5. Map domains to embeddings 
 ###############################################################################
 
 # Map domains to embeddings
@@ -77,7 +98,7 @@ for bgc in bgc_domains:
         #     bgc_embeddings[bgc].append([0]*100) # if domain not in embeddings, add zeros
 
 ###############################################################################
-## 5. Compute the mean embedding for each sample 
+## 6. Compute the mean embedding for each sample 
 ###############################################################################
 
 bgc_embeddings_mean = {}
@@ -86,13 +107,13 @@ for bgc in bgc_embeddings:
     bgc_embeddings_mean[bgc] = df_tmp.mean(axis=1)
     
 ###############################################################################
-## 6. Convert bgc_embeddings_mean to data frame
+## 7. Convert bgc_embeddings_mean to data frame
 ###############################################################################
 
 df_bgc_embeddings_mean = pd.DataFrame(bgc_embeddings_mean).T
 
 ###############################################################################
-## 7. Cluster BGCs
+## 8. Cluster BGCs
 ###############################################################################
 
 birch = Birch(
@@ -108,7 +129,7 @@ birch.fit(df_bgc_embeddings_mean)
 brc_cluster = birch.predict(df_bgc_embeddings_mean)
 
 ###############################################################################
-## 8. Export clustering
+## 9. Export clustering
 ###############################################################################
 
 bgc_ids = df_bgc_embeddings_mean.index
@@ -119,3 +140,5 @@ output_df = pd.DataFrame({
 })
 
 output_df.to_csv(output_tsv, sep='\t', index=False)
+
+print("Clustering executed successfully")

@@ -52,39 +52,30 @@ if metadata is None and os.path.exists(input_dir) is False:
 if output_dir is None:
     output_dir = os.path.join(os.path.dirname(os.path.abspath(input_dir)), "sorted")
 
-# overwrite == True and output_dir exists, output_dir is removed and created
-if args.overwrite and os.path.exists(output_dir):
-    try:
-        shutil.rmtree(output_dir)
-    except OSError as e:
-        print(f'Error: {e}')
+if os.path.exists(output_dir) is True:
+    
+    if args.overwrite is False:
+        print(f'Output dir {output_dir} already exists. Use --overwrite to overwrite')
+        sys.exit(0)
+    
+    if args.overwrite is True:
+        try:
+            shutil.rmtree(output_dir)
+        except OSError as e:
+            print(f'Error: {e}')
+        try:       
+            os.makedirs(output_dir)
+        except Exception as e:
+            print(f'Error: {e}')
+            sys.exit(1)
+        
+if os.path.exists(output_dir) is False:
     try:       
         os.makedirs(output_dir)
     except Exception as e:
         print(f'Error: {e}')
         sys.exit(1)
         
-# overwrite == True and output_dir does not exist, output_dir is created        
-if args.overwrite and os.path.exists(output_dir) is False:
-    try:       
-        os.makedirs(output_dir)
-    except Exception as e:
-        print(f'Error: {e}')
-        sys.exit(1)
-        
-# overwrite == False and output_dir does not exist, output_dir is created           
-if args.overwrite is False and os.path.exists(output_dir) is False:
-    try:       
-        os.makedirs(output_dir)
-    except Exception as e:
-        print(f'Error: {e}')
-        sys.exit(1)
-        
-# overwrite == False and output_dir does, the scripts exits    
-if args.overwrite is False and os.path.exists(output_dir) is True:
-    print(f'Output dir {output_dir} already exists. Use --overwrite to overwrite')
-    sys.exit(0)
-
 ################################################################################
 # 4. Load the metadata tables and check if exist
 ################################################################################
