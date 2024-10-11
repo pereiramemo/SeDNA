@@ -47,7 +47,7 @@ if os.path.exists(output_tsv) is True:
     
     if args.overwrite is True:
         try:
-            shutil.rmtree(output_tsv)
+            os.remove(output_tsv)
         except OSError as e:
             print(f'Error: {e}')
         
