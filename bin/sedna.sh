@@ -115,6 +115,6 @@ case "${MODULE}" in
         ;;    
     "cluster")
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_env
-        "${BIN_DIRECTORY}/modules/cluster.py" $PARAMS
+        "${BIN_DIRECTORY}/modules/cluster_mean.py" $PARAMS
         ;;
 esac        
