@@ -59,7 +59,7 @@ if os.path.exists(output_tsv) is True:
 modules_dir = os.path.dirname(os.path.abspath(__file__))
 bin_dir = os.path.dirname(modules_dir)
 resources_dir = os.path.join(os.path.dirname(bin_dir), "resources")
-embeddings = os.path.join(resources_dir, "embeddings", "dom_embeddings_mtx_mibig_pfam.pkl")
+embeddings = os.path.join(resources_dir, "embeddings", "dom_embeddings_mtx_mibig_noref_biosubpfam_evalue_thres.pkl")
 
 with open(embeddings, 'rb') as f:
     dom_embeddings = pickle.load(f)
