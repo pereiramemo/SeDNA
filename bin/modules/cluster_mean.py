@@ -13,6 +13,10 @@ import shutil
 import pickle
 from sklearn.cluster import Birch
 
+modules_dir = os.path.dirname(os.path.abspath(__file__))
+bin_dir = os.path.dirname(modules_dir)
+resources_dir = os.path.join(os.path.dirname(bin_dir), "resources")
+
 ###############################################################################
 ## 2. Parse input data and optional arguments
 ###############################################################################
@@ -24,6 +28,7 @@ parser = argparse.ArgumentParser(prog='cluster.py', \
 parser.add_argument("--input_dir", help="Input directory containing the .*_annotdoms_resolved.tsv files.")
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
 parser.add_argument("--threshold", default = 1, help="BIRCH clustering threshold")
+parser.add_argument("--embeddings_file", default = f"{resources_dir}/embeddings/domain_embeddings_mibig3.1_noref_pfam.pkl", help="Domain embeddings pkl file.")
 parser.add_argument("--output_tsv", default = "bgc_clust_output.tsv", help="Output clustering table (tsv).")
 parser.add_argument("--overwrite", action="store_true", help="Overwrite output directory.")
 
@@ -32,6 +37,7 @@ args = parser.parse_args()
 input_dir = args.input_dir
 sample_name = args.sample_name
 threshold = float(args.threshold)
+embeddings_file = args.embeddings_file
 output_tsv = args.output_tsv
 overwrite = args.overwrite
 
@@ -56,15 +62,10 @@ if os.path.exists(output_tsv) is True:
 ###############################################################################
 
 # Load embeddings
-modules_dir = os.path.dirname(os.path.abspath(__file__))
-bin_dir = os.path.dirname(modules_dir)
-resources_dir = os.path.join(os.path.dirname(bin_dir), "resources")
-embeddings = os.path.join(resources_dir, "embeddings", "dom_embeddings_mtx_mibig_noref_biosubpfam_evalue_thres.pkl")
-
-with open(embeddings, 'rb') as f:
+with open(embeddings_file, 'rb') as f:
     dom_embeddings = pickle.load(f)
-
-
+    
+# Find files    
 matching_files = []
 for root, dirs, files in os.walk(input_dir):
     for file in files:

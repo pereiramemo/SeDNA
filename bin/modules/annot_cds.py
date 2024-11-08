@@ -35,7 +35,7 @@ parser.add_argument("--create_fasta", default = True, action=argparse.BooleanOpt
 parser.add_argument("--annotate", default = True, action=argparse.BooleanOptionalAction, help="True or False to perform the CDSs annotation using hmmsearch.")
 parser.add_argument("--resolve_doms", default = True, action=argparse.BooleanOptionalAction, help="Resolve domain structures using cath-resolve-hits.")
 parser.add_argument("--overwrite", default = False, action=argparse.BooleanOptionalAction, help="Overwrite output directory.")
-parser.add_argument("--hmms_db", default = "/home/ec2-user/SageMaker/efs/sandbox/sandbox/development/epereira/dev/bioprospecting_internal/resources/databases/Pfam-A.hmm", help="Path to HMMs database.")
+parser.add_argument("--hmms_db", default = f'{resources_dir}/databases/Pfam-A.hmm', help="Path to HMMs database.")
 parser.add_argument("--evalue_thres", default = 1e-3, help="hmmsearch - e-value threshold.")
 parser.add_argument("--cut_ga", default = True, action=argparse.BooleanOptionalAction, help="hmmsearch - Use the gathering bitscores for sequence inclusion")
 parser.add_argument("--threads", default = 4, help="hmmsearch - Number of threads")

@@ -16,7 +16,8 @@ AVAILABLE_MODULES=(
 "run_all"
 "dereplicate"
 "annot_cds"
-"cluster"
+"cluster_mean"
+"cluster_sif"
 )
 
 usage() {
@@ -113,8 +114,12 @@ case "${MODULE}" in
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_env
         "${BIN_DIRECTORY}/modules/annot_cds.py" $PARAMS
         ;;    
-    "cluster")
+    "cluster_mean")
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_env
         "${BIN_DIRECTORY}/modules/cluster_mean.py" $PARAMS
         ;;
+    "cluster_sif")
+        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_env
+        "${BIN_DIRECTORY}/modules/cluster_sif.py" $PARAMS
+        ;;   
 esac        

@@ -16,6 +16,10 @@ from collections import Counter
 from sklearn.cluster import Birch
 from sklearn.decomposition import PCA
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
+bin_dir = os.path.dirname(current_dir)
+resources_dir=os.path.join(os.path.dirname(bin_dir),"resources")
+
 ###############################################################################
 ## 2. Parse input data and optional arguments
 ###############################################################################
@@ -27,6 +31,8 @@ parser = argparse.ArgumentParser(prog='cluster.py', \
 parser.add_argument("--input_dir", help="Input directory containing the .*_annotdoms_resolved.tsv files.")
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
 parser.add_argument("--threshold", default = 1, help="BIRCH clustering threshold")
+parser.add_argument("--embeddings_file", default = f"{resources_dir}/embeddings/domain_embeddings_mibig3.1_noref_pfam.pkl", help="Domain embeddings pkl file.")
+parser.add_argument("--counts_file", default = f"{resources_dir}/embeddings/domain2counts_mibig3.1_vs_pfam.pkl", help="Domain counts pkl file.")
 parser.add_argument("--alpha", default = 0.001, help="SIF a parameter. Default: 0.001.")
 parser.add_argument("--output_tsv", default = "bgc_clust_output.tsv", help="Output clustering table (tsv).")
 parser.add_argument("--overwrite", action="store_true", help="Overwrite output directory.")
@@ -37,6 +43,8 @@ input_dir = args.input_dir
 sample_name = args.sample_name
 threshold = float(args.threshold)
 alpha = float(args.alpha)
+embeddings_file = args.embeddings_file
+counts_file = args.counts_file
 output_tsv = args.output_tsv
 overwrite = args.overwrite
 
@@ -60,19 +68,12 @@ if os.path.exists(output_tsv) is True:
 ## 4. Load data from resources
 ###############################################################################
 
-# Set paths
-modules_dir = os.path.dirname(os.path.abspath(__file__))
-bin_dir = os.path.dirname(modules_dir)
-resources_dir = os.path.join(os.path.dirname(bin_dir), "resources")
-dom_embeddings_file = os.path.join(resources_dir, "embeddings", "dom_embeddings_mtx_mibig_noref_biosubpfam_cut_ga_thres.pkl")
-dom2counts_file = os.path.join(resources_dir, "embeddings", "pfam_dom2count_mibig_gbk_3.1.pkl")
-
 # Load embeddings
-with open(dom_embeddings_file, 'rb') as f:
+with open(embeddings_file, 'rb') as f:
     domain_embeddings = pickle.load(f)
 
 # Load domain counts
-with open(dom2counts_file, 'rb') as f:
+with open(counts_file, 'rb') as f:
     dom2counts = pickle.load(f)
 
 dom2counts_dict = dom2counts.set_index('domain_id')['count'].to_dict()
