@@ -34,6 +34,7 @@ parser.add_argument("--threshold", default = 1, help="BIRCH clustering threshold
 parser.add_argument("--embeddings_file", default = f"{resources_dir}/embeddings/domain_embeddings_mibig3.1_noref_pfam.pkl", help="Domain embeddings pkl file.")
 parser.add_argument("--counts_file", default = f"{resources_dir}/embeddings/domain2counts_mibig3.1_vs_pfam.pkl", help="Domain counts pkl file.")
 parser.add_argument("--alpha", default = 0.001, help="SIF a parameter. Default: 0.001.")
+parser.add_argument("--bgc_embeddings_tsv", default = None, help="BGC embeddings output table (tsv)")
 parser.add_argument("--output_tsv", default = "bgc_clust_output.tsv", help="Output clustering table (tsv).")
 parser.add_argument("--overwrite", action="store_true", help="Overwrite output directory.")
 
@@ -45,6 +46,7 @@ threshold = float(args.threshold)
 alpha = float(args.alpha)
 embeddings_file = args.embeddings_file
 counts_file = args.counts_file
+bgc_embeddings_tsv = args.bgc_embeddings_tsv
 output_tsv = args.output_tsv
 overwrite = args.overwrite
 
@@ -113,9 +115,9 @@ def map_domain2embeddings(domains, domain_embeddings, weights):
             weight = weights.get(domain, 1e-3)
             embedding_weighted = weight * np.array(domain_embeddings[domain])
             
-            embedding_mean += embedding_weighted
+            embedding_mean += embedding_weighted    
             
-    embedding_norm = np.linalg.norm(embedding_mean) 
+    embedding_norm = np.linalg.norm(embedding_mean)         
     embedding_mean = embedding_mean / embedding_norm 
         
     return(embedding_mean)
@@ -146,7 +148,8 @@ matching_files = []
 for root, dirs, files in os.walk(input_dir):
     for file in files:
         if re.search(".*_annotdoms_resolved.tsv", file):
-            matching_files.append(os.path.join(root, file))
+            if os.stat(os.path.join(root, file)).st_size > 0:
+                matching_files.append(os.path.join(root, file))
 
 # Initialize dictionary of lists, echa list containing BGC domains.
 bgc_domains = {}
@@ -157,33 +160,52 @@ for file in matching_files:
     bgc_domains[bgc] = df_tmp.iloc[:, 1].tolist()
     
 ###############################################################################
-## 7. Map domains to embeddings 
+## 7. Map domains to embeddings and compute weighted mean
 ###############################################################################
 
-bgc_embeddings = {}
+bgc_mean_embeddings = {}
 
 for bgc in bgc_domains:
 
     # Deduplicate elements in list
     bgc_domains[bgc] = list(dict.fromkeys(bgc_domains[bgc]))     
-    bgc_embeddings[bgc] = map_domain2embeddings(bgc_domains[bgc], 
-                                                domain_embeddings, 
-                                                weights)
-                                          
+    bgc_mean_embeddings[bgc] = map_domain2embeddings(bgc_domains[bgc], 
+                                                     domain_embeddings, 
+                                                     weights)
+                                                  
 ###############################################################################
-## 8. Remove first PC 
+## 8. Convert list of weighted mean embeddings to df and np objects
 ###############################################################################
 
-bgc_embeddings_df = pd.DataFrame(bgc_embeddings).T
-bgc_embeddings_np = bgc_embeddings_df.to_numpy()
+bgc_mean_embedding_df = pd.DataFrame(bgc_mean_embeddings).T
+        
+###############################################################################
+# 9. Identify and remove rows with all NaNs
+###############################################################################
 
-bgc_embeddings_minus_pc1_np = remove_pc(bgc_embeddings_np)
+i = bgc_mean_embedding_df.isna().all(axis=1)
+bgcs_ids_unannot = list(bgc_mean_embedding_df[i].index)
+bgc_mean_embedding_df = bgc_mean_embedding_df[~i]
+        
+###############################################################################
+## 10. Remove first PC 
+###############################################################################
 
-bgc_embeddings_minus_pc1_df = pd.DataFrame(bgc_embeddings_minus_pc1_np,
-                                            index=bgc_embeddings_df.index)
+# convert to np to run PCA in remove_pc
+bgc_mean_embedding_np = bgc_mean_embedding_df.to_numpy()
+# remove fist PC
+bgc_mean_embedding_minus_pc1_np = remove_pc(bgc_mean_embedding_np)
+# convert back to df
+bgc_mean_embedding_minus_pc1_df = pd.DataFrame(bgc_mean_embedding_minus_pc1_np,
+                                               index=bgc_mean_embedding_df.index,
+                                               columns = bgc_mean_embedding_df.columns
+                                              )
+
+if bgc_embeddings_tsv is not None:
+    bgc_mean_embedding_minus_pc1_df.to_csv(bgc_embeddings_tsv, sep='\t', index=True)
 
 ###############################################################################
-## 9. Cluster BGCs
+## 11. Cluster BGCs
 ###############################################################################
 
 birch = Birch(
@@ -194,20 +216,37 @@ birch = Birch(
         
 birch.threshold = threshold
 
-birch.branching_factor = bgc_embeddings_minus_pc1_df.shape[0]
-birch.fit(bgc_embeddings_minus_pc1_df)
-brc_cluster = birch.predict(bgc_embeddings_minus_pc1_df)
+birch.branching_factor = bgc_mean_embedding_minus_pc1_df.shape[0]
+birch.fit(bgc_mean_embedding_minus_pc1_df)
+brc_cluster = birch.predict(bgc_mean_embedding_minus_pc1_df)
 
 ###############################################################################
-## 10. Export clustering
+## 12. Format clustering as df
 ###############################################################################
 
-bgc_ids = bgc_embeddings_minus_pc1_df.index
+bgc_ids = bgc_mean_embedding_minus_pc1_df.index
 
 output_df = pd.DataFrame({
     'bgc_id': bgc_ids,
     'cluster_id': brc_cluster
 })
+
+###############################################################################
+## 13. Add un annot BGCs
+###############################################################################
+
+cluster_id_max = output_df['cluster_id'].max()
+cluster_ids_unannot = list(range(cluster_id_max +1, 
+                                 cluster_id_max + len(bgcs_ids_unannot) +1))
+
+output_unannot_df = pd.DataFrame({'bgc_id': bgcs_ids_unannot, 
+                                  'cluster_id': cluster_ids_unannot})
+
+output_df = pd.concat([output_df, output_unannot_df], ignore_index=True)
+
+###############################################################################
+## 14. Export clustering
+###############################################################################
 
 output_df.to_csv(output_tsv, sep='\t', index=False)
 

@@ -114,23 +114,29 @@ for bgc in bgc_embeddings:
 df_bgc_embeddings_mean = pd.DataFrame(bgc_embeddings_mean).T
 
 ###############################################################################
-## 8. Cluster BGCs
+# 8. Identify and remove rows with all NaNs
+###############################################################################
+
+i = df_bgc_embeddings_mean.isna().all(axis=1)
+bgcs_ids_unannot = list(df_bgc_embeddings_mean[i].index)
+df_bgc_embeddings_mean = df_bgc_embeddings_mean[~i]
+
+###############################################################################
+## 9. Cluster BGCs
 ###############################################################################
 
 birch = Birch(
-            n_clusters=None,  
-            compute_labels=False, 
-            copy=False 
+            n_clusters=None
         )
         
 birch.threshold = threshold
-
 birch.branching_factor = df_bgc_embeddings_mean.shape[0]
+
 birch.fit(df_bgc_embeddings_mean)
 brc_cluster = birch.predict(df_bgc_embeddings_mean)
 
 ###############################################################################
-## 9. Export clustering
+## 10. Format clustering as df
 ###############################################################################
 
 bgc_ids = df_bgc_embeddings_mean.index
@@ -139,6 +145,23 @@ output_df = pd.DataFrame({
     'bgc_id': bgc_ids,
     'cluster_id': brc_cluster
 })
+
+###############################################################################
+## 11. Add un annot BGCs
+###############################################################################
+
+cluster_id_max = output_df['cluster_id'].max()
+cluster_ids_unannot = list(range(cluster_id_max +1, 
+                                 cluster_id_max + len(bgcs_ids_unannot) +1))
+
+output_unannot_df = pd.DataFrame({'bgc_id': bgcs_ids_unannot, 
+                                  'cluster_id': cluster_ids_unannot})
+
+output_df = pd.concat([output_df, output_unannot_df], ignore_index=True)
+
+###############################################################################
+## 12. Export clustering
+###############################################################################
 
 output_df.to_csv(output_tsv, sep='\t', index=False)
 
