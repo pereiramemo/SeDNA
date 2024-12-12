@@ -7,7 +7,7 @@ set -e
 CONDA_BASE=$(conda info --base)
 CONDA_ENVS_PATH=${CONDA_ENVS_PATH:-"${CONDA_BASE}/envs/"}
 BIN_DIRECTORY=$(dirname $0)
-MAIN_DIRECTORY=$(dirname ${BIN_DIRECTORY}))
+MAIN_DIRECTORY=$(dirname ${BIN_DIRECTORY})
 PARAMS="--help"
 
 AVAILABLE_MODULES=(
