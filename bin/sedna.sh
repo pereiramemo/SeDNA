@@ -7,7 +7,6 @@ set -e
 CONDA_BASE=$(conda info --base)
 CONDA_ENVS_PATH=${CONDA_ENVS_PATH:-"${CONDA_BASE}/envs/"}
 BIN_DIRECTORY=$(dirname $0)
-MAIN_DIRECTORY=$(realpath $BIN_DIRECTORY/../)
 
 PARAMS="--help"
 
@@ -55,7 +54,7 @@ while true; do
             ;;
         -v|--version)
             echo "Version:"
-            cat "${MAIN_DIRECTORY}/VERSION.txt"
+            cat "${BIN_DIRECTORY}/VERSION.txt"
             exit 0
             ;;
         -h|--help)
@@ -90,38 +89,38 @@ fi
 case "${MODULE}" in
     "run_antismash")
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/antismash_env
-        "${BIN_DIRECTORY}/modules/run_antismash.py" $PARAMS
+        run_antismash.py $PARAMS
         ;;
     "run_deepbgc")
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/deepbgc_env
-        "${BIN_DIRECTORY}/modules/run_deepbgc.py" $PARAMS
+        run_deepbgc.py $PARAMS
         ;;
     "run_gecco")
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/gecco_env
-        "${BIN_DIRECTORY}/modules/run_gecco.py" $PARAMS
+        run_gecco.py $PARAMS
         ;;
     "run_all")
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/deepbgc_env
-        "${BIN_DIRECTORY}/modules/run_deepbgc.py" $PARAMS
+        run_deepbgc.py $PARAMS
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/antismash_env
-        "${BIN_DIRECTORY}/modules/run_antismash.py" $PARAMS
+        run_antismash.py $PARAMS
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/gecco_env
-        "${BIN_DIRECTORY}/modules/run_gecco.py" $PARAMS
+        run_gecco.py $PARAMS
         ;;
     "dereplicate")
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_env
-        "${BIN_DIRECTORY}/modules/dereplicate.py" $PARAMS
+        dereplicate.py $PARAMS
         ;;
     "annot_cds")
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_env
-        "${BIN_DIRECTORY}/modules/annot_cds.py" $PARAMS
+        annot_cds.py $PARAMS
         ;;    
     "cluster_mean")
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_env
-        "${BIN_DIRECTORY}/modules/cluster_mean.py" $PARAMS
+        cluster_mean.py $PARAMS
         ;;
     "cluster_sif")
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_env
-        "${BIN_DIRECTORY}/modules/cluster_sif.py" $PARAMS
+        cluster_sif.py $PARAMS
         ;;   
 esac        
