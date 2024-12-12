@@ -7,6 +7,7 @@ set -e
 CONDA_BASE=$(conda info --base)
 CONDA_ENVS_PATH=${CONDA_ENVS_PATH:-"${CONDA_BASE}/envs/"}
 BIN_DIRECTORY=$(dirname $0)
+MAIN_DIRECTORY=$(dirname ${BIN_DIRECTORY}))
 PARAMS="--help"
 
 AVAILABLE_MODULES=(
@@ -53,7 +54,7 @@ while true; do
             ;;
         -v|--version)
             echo "Version:"
-            cat "${BIN_DIRECTORY}/sedna_version.txt"
+            cat "${MAIN_DIRECTORY}/VERSION.txt"
             exit 0
             ;;
         -h|--help)
