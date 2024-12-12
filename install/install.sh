@@ -18,7 +18,12 @@ chmod 775 "${SEDNA_REPOSITORY_DIRECTORY}/bin/modules/"*.py
 echo "Creating sedna main environment"
 
 ENV_NAME="sedna_main_env"
-(conda create -y -p ${CONDA_ENVS_PATH}/${ENV_NAME} -c conda-forge -c bioconda -c || echo "Error when creating sedna main environment" ; exit 1) &> ${LOG_DIRECTORY}/sedna.log
+(conda create -y -p ${CONDA_ENVS_PATH}/${ENV_NAME} -c conda-forge -c bioconda || echo "Error when creating sedna main environment" ; exit 1) &> ${LOG_DIRECTORY}/sedna.log
+
+if [[ $? -ne 0 ]]; then
+    echo "conda create failed. See logs/sedna_installation/sedna.log for details"
+    exit $? 
+fi
 
 # Copy main executable
 echo -e "\t*Copying main sedna executable into ${ENV_NAME} environment path"
