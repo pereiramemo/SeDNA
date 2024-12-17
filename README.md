@@ -12,9 +12,10 @@ The tasks performed by Sedna are the following.
 
 # How to install
 
-### Recommended pre-installation steps
+### Recommended Pre-installation Steps
 
-1. Make sure conda and mamba are installed. 
+1. Ensure Conda and Mamba are installed.
+Check their versions with the following commands:
 ```
 conda --version
 ```
@@ -22,13 +23,14 @@ conda --version
 mamba --version
 ```
 
-If conda is not installed, you can install if following the instrctions [here](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
-If manba is not insalled, you can install it with the following command (after installing conda).
+
+If Conda is not installed, follow the instructions [here](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).  
+If Mamba is not installed, you can install it using Conda:
 ```
 conda install conda-forge::mamba
 ```
 
-2. Clean and update conda
+2. Clean and update Conda:
 ```
 conda clean --all -y 
 ```
@@ -36,24 +38,24 @@ conda clean --all -y
 conda update -n base --all -y
 ```
 
-### Installation steps
+### Installation Steps
 
-1. Clone the repository  
+1. Clone the repository:  
 ```
 git clone https://github.com/new-atlantis-labs/SeDNA.git
 ```
 
-2. Navigate to the repositry  
+2. Navigate to the repository: 
 ```
 cd SeDNA
 ```
 
-3. Run the `install.sh` script within the `install` direcotry  
+3. Run the installation script located in the `install` directory:
 ```
 ./install/install.sh
 ```
 
-4. Run the `get_databases.sh` script within the `install` direcotry  
+4. Download required databases using the provided script: 
 ```
 ./install/get_databases.sh
 ```
