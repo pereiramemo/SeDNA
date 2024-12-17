@@ -143,7 +143,7 @@ for s in ${SAMPLES}; do
 done
 ```
 
-"Since we are annotating the same sequences with different tools, it is expected that some BGC sequences will be predicted by more than one tool. This means we may have duplicate BGC predictions. To obtain a de-replicated catalog, we need to run the `dereplicate` module as follows:
+Since we are annotating the same sequences with different tools, it is expected that some BGC sequences will be predicted by more than one tool. This means we may have duplicate BGC predictions. To obtain a de-replicated catalog, we need to run the `dereplicate` module as follows:
 
 ```
 for s in ${SAMPLES}; do
@@ -156,7 +156,7 @@ for s in ${SAMPLES}; do
 done                     
 ```
 
-"This script will generate a `sorted` folder within each output directory, where we can find the dereplicated catalog.
+This script will generate a `sorted` folder within each output directory, where we can find the dereplicated catalog.
 Let’s take a look at one of these:
 
 ```
@@ -188,9 +188,8 @@ sedna.sh --module cluster_sif \
               
 ```              
 
-The file `${OUTPUT_DIR}/bgc_embeddings.tsv` contains the emebdding of each BGC, which can be useful for downstream analysis, such as novelty or diversity assessment. 
+The file `${OUTPUT_DIR}/bgc_embeddings.tsv` contains the embedding of each BGC, which can be useful for downstream analysis, such as novelty or diversity assessment.
 
-The file `${OUTPUT_DIR}/clust.tsv`contains the actual clustering 
-
+The file `${OUTPUT_DIR}/clust.tsv` contains the actual clustering as a two-column TSV table, with the BGC ID and the Gene Cluster Family (GCF) ID in the first and second columns, respectively.
 
 
