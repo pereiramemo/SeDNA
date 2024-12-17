@@ -119,26 +119,71 @@ The current version of SeDNA integrates three BGC annotation tools: [antiSMASH](
 Let’s navigate to the root of the repository, and get all the samples in a variable:
 
 ```
-SAMPLES=$(ls "tests/data/OceanDNA"-*.fa)
+SAMPLES=$(ls "tests/data/OceanDNA"-*_redu.fasta)
 ```
 
 Now, we iterate over these samples, and annotate the BGC sequences utilizing the three tools. For simplicity we will use the `run_all` module. 
 ```
+OUTPUT_DIR=./tests/output/sedna_output
+
 for s in ${SAMPLES}; do
 
-SAMPLE_NAME=$(basename "${s}" .fa)
+SAMPLE_NAME=$(basename "${s}" .fasta)
     echo "${SAMPLE_NAME}"
     sedna.sh --module run_all \
         --params "--input_sample ${s} \
                   --sample_name ${SAMPLE_NAME} \
-                  --output_dir ${REPO_DIR}/test/output/sedna_output";
+                  --output_dir ${OUTPUT_DIR}";
 
 done
 ```
 
+Since we are annotating the same sequences with different tools, it is expected that some BGC sequences will be predicted by more than one tool. That is, we may have duplicate BGC predictions. To obtain a de-replicated catalog, we need to run the `dereplicate` module as follows:
+
+```
+for s in ${SAMPLES}; do
+
+    SAMPLE_NAME=$(basename "${s}" .fa)
+    echo "${SAMPLE_NAME}"
+    sedna.sh --module dereplicate \
+    --params "--input_dir ${OUTPUT_DIR}/${SAMPLE_NAME}/bgc_annot/inter"
+           
+done                     
+```
+
+This script will generate the `sorted` folder within each output directory, where we can find our dereplicated catalog.
+Let's see one of these:
+
+```
+ls ${OUTPUT_DIR}/OceanDNA-b11979_redu/bgc_annot/sorted/dereplicated/
+```
 
 
+Once we obtain the de-replicated catalog, we are going to cluster the BGC sequences predicted in the three samples.
+For this we must annotate the Pfam domains with the `cds_annot` module:
 
+
+```
+for s in ${SAMPLES}; do
+
+      SAMPLE_NAME=$(basename "${s}" .fa)
+      echo "${SAMPLE_NAME}"
+           sedna.sh --module annot_cds \
+           --params "--input_dir ${OUTPUT_DIR}/${SAMPLE_NAME}/bgc_annot/sorted/dereplicated"
+done 
+
+```
+
+Finally, based on the domain annotations, we will cluster the BGC sequences with the module `cluster_sif`:
+
+```
+sedna.sh --module cluster_sif \
+    --params "--input_dir  ${OUTPUT_DIR} \
+              --threshold 3 \
+              --bgc_embeddings_tsv ${OUTPUT_DIR}/bgc_embeddings.tsv \
+              --output_tsv ${OUTPUT_DIR}/clust.tsv"
+              
+```              
 
 
 
