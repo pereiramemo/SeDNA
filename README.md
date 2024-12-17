@@ -34,7 +34,7 @@ conda install conda-forge::mamba
 conda clean --all -y 
 ```
 ```
-conda update -n base --all -y
+conda update -y -n base -c defaults conda
 ```
 
 ### Installation Steps
