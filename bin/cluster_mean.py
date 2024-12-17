@@ -13,9 +13,8 @@ import shutil
 import pickle
 from sklearn.cluster import Birch
 
-modules_dir = os.path.dirname(os.path.abspath(__file__))
-bin_dir = os.path.dirname(modules_dir)
-resources_dir = os.path.join(os.path.dirname(bin_dir), "resources")
+current_dir = os.path.dirname(os.path.abspath(__file__))
+resources_dir=os.path.join(os.path.dirname(current_dir),"resources")
 
 ###############################################################################
 ## 2. Parse input data and optional arguments

@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser(prog='run_gecco.py', \
                                  description='Annotates BGC sequences utilizing the gecco tool.')
 
 # general parameters
-parser.add_argument("--input_sample", help="Input fasta file.")
+parser.add_argument("--input_sample", required=True, help="Input fasta file.")
 parser.add_argument("--threads", default = 4, type = int, help="Number of threads.")
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
 parser.add_argument("--output_dir",  default = "sedna_output", help="Output directory.")
@@ -78,10 +78,12 @@ def create_directory(path):
 
 def run_gecco(input_sample, output_dir):
 
-    command_gecco = f"gecco run \
-                    --genome {input_sample} \
-                    --jobs {threads} \
-                    --output-dir {output_dir}"
+    command_gecco = [
+                     "gecco", "run",
+                     "--genome", input_sample,
+                     "--jobs", threads,
+                     "--output-dir", output_dir
+                    ]
 
     result_gecco = subprocess.run(command_gecco, 
                                   shell=True, 

@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser(prog='run_deepbgc.py', \
                                  description='Annotates BGC sequences utilizing the deepBGC tool.')
 
 # general parameters
-parser.add_argument("--input_sample", help="Input fasta file.")
+parser.add_argument("--input_sample", required=True, help="Input fasta file.")
 parser.add_argument("--threads", default = 4, type=int, help="Number of threads.")
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
 parser.add_argument("--output_dir", default = "sedna_output", help="Output directory.")
@@ -87,13 +87,15 @@ def create_directory(path):
 
 def run_deepbgc(input_sample, output_dir):
     
-    command_deepbgc = f"deepbgc pipeline \
-                      --detector deepbgc \
-                      --classifier product_class \
-                      --prodigal-meta-mode \
-                      --min-nucl {minlength} \
-                      --output {output_dir} \
-                      {input_sample}" 
+    command_deepbgc = [
+                      "deepbgc", "pipeline",
+                      "--detector", "deepbgc",
+                      "--classifier", "product_class",
+                      "--prodigal-meta-mode",
+                      "--min-nucl", minlength,
+                      "--output", output_dir,
+                      input_sample
+                      ]
 
     result_deepbgc = subprocess.run(command_deepbgc, 
                                       shell=True, 

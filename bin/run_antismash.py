@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser(prog='run_antismash.py', \
                                  description='Annotates BGC sequences utilizing the antiSMASH tool.')
 
 # general parameters
-parser.add_argument("--input_sample", help="Input fasta file.")
+parser.add_argument("--input_sample", required=True, help="Input fasta file.")
 parser.add_argument("--threads", default = 4, type=int, help="Number of threads.")
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
 parser.add_argument("--output_dir", default = "sedna_output", help="Output directory.")
@@ -92,15 +92,17 @@ def create_directory(path):
         sys.exit(1)
                 
 def run_antismash(input_sample, output_dir):
-    command_antismash = f"antismash \
-                           --cpus {threads} \
-                           --genefinding-tool {genefinding_tool} \
-                           --taxon {taxon} \
-                           --allow-long-headers \
-                           --minlength {minlength} \
-                           --minimal \
-                           --output-dir {output_dir}  \
-                            {input_sample}" 
+    command_antismash = [
+                        "antismash", 
+                         "--cpus", threads,
+                         "--genefinding-tool", genefinding_tool,
+                         "--taxon", taxon,
+                         "--allow-long-headers",
+                         "--minlength", minlength,
+                         "--minimal",
+                         "--output-dir", output_dir,
+                         input_sample
+                        ]
 
     result_antismash = subprocess.run(command_antismash, 
                                       shell=True, 

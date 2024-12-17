@@ -17,8 +17,7 @@ from sklearn.cluster import Birch
 from sklearn.decomposition import PCA
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-bin_dir = os.path.dirname(current_dir)
-resources_dir=os.path.join(os.path.dirname(bin_dir),"resources")
+resources_dir=os.path.join(os.path.dirname(current_dir),"resources")
 
 ###############################################################################
 ## 2. Parse input data and optional arguments

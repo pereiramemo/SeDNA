@@ -13,12 +13,8 @@ import shutil
 import pyhmmer
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-bin_dir = os.path.dirname(current_dir)
-sys.path.append(f'{bin_dir}/src')
+sys.path.append(f'{current_dir}/src')
 from bgc_annot import utilities
-
-resources_dir=os.path.join(os.path.dirname(bin_dir),"resources")
-cath_resolve_hits=os.path.join(resources_dir,"tools","cath-resolve-hits.ubuntu-20.04")
                                                        
 ################################################################################
 # 2. Parse parameters
@@ -158,7 +154,7 @@ if resolve_doms == True:
         output_tsv = f'{file}_annotdoms.tsv'
         output_resolved_tsv = f'{file}_annotdoms_resolved.tsv'
 
-        command_cath_resolve_hits = f"{cath_resolve_hits} \
+        command_cath_resolve_hits = f"cath-resolve-hits \
                                 --input-format hmmer_domtblout \
                                 {domtblout} > {output_resolved_tsv}"
 
