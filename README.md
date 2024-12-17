@@ -69,8 +69,47 @@ Now, you should be able to run the SeDNA wrapping script:
 ```
 sedna.sh --help
 ```
+We get the following help instructions:
+```
+Usage: ./bin/sedna.sh [-m <module>] [-o <options>] [-v|--version] [-h|--help]
+ 
+Options:
+  -m, --module    Specify the module. Available modules: run_antismash run_deepbgc run_gecco run_all dereplicate annot_cds cluster_mean cluster_sif
+  -p, --params    Specify parameters to give to each module
+  -v, --version   Display the version information
+  -h, --help      Display this help message
+```
 
+To get the help of an specific module, we can run the following command:
+```
+sedna.sh --module <module_name> --params "--help"
+```
+For example, 
+```
+sedna.sh --module run_antismash --params "--help"
+```
+SeDNA is composed of different modules that must be run sequentially in a specific order.  
+First, we need to annotate the BGC sequences in the assembled metagenomics sequences of Metagenome-Assembled-Genomes (all as fasta files). In this example, we will be analyzing three toy MAGs from the [OceanDNA catalog](https://www.nature.com/articles/s41597-022-01392-5), which can be found in the `tests/data` folder with the repository. 
+The current version of SeDNA integrates three BGC annotation tools: [antiSMASH](https://github.com/antismash/antismash), [deepBGC](https://github.com/Merck/deepbgc), and [GECCO](https://github.com/zellerlab/GECCO). We can run these one-by-one, using the `run_<tool>` modules or all at once with the `run_all` module.
+Let’s navigate to the root of the repository, and get all the samples in a variable:
 
+```
+SAMPLES=$(ls "tests/data/OceanDNA"-*.fa)
+```
+
+Now, we iterate over these samples, and annotate the BGC sequences utilizing the three tools. For simplicity we will use the `run_all` module. 
+```
+for s in ${SAMPLES}; do
+
+SAMPLE_NAME=$(basename "${s}" .fa)
+    echo "${SAMPLE_NAME}"
+    sedna.sh --module run_all \
+        --params "--input_sample ${s} \
+                  --sample_name ${SAMPLE_NAME} \
+                  --output_dir ${REPO_DIR}/test/output/sedna_output";
+
+done
+```
 
 
 
