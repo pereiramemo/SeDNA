@@ -127,3 +127,8 @@ EXIT_STATUS=$?
 conda deactivate 
 check_exit_status "${EXIT_STATUS}" "Downloading deepbgc databases failed."
 
+###############################################################################
+# 8. Exit get databases script
+###############################################################################
+
+echo -e "Getting databases completed successfully."

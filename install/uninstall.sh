@@ -69,3 +69,9 @@ if [[ -d "${DATABASE_DIR}/deepbgc" ]]; then
     rm -r "${DATABASE_DIR}/deepbgc"
     check_exit_status $? "Removing ${DATABASE_DIR}/deepbgc failed."
 fi    
+
+###############################################################################
+# 5. Exit installation script
+###############################################################################
+
+echo -e "Uninstallation completed successfully."

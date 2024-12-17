@@ -109,6 +109,4 @@ done
 # 6. Exit installation script
 ###############################################################################
 
-echo -e "..............................."
-echo -e "     Installation Complete     "
-echo -e "..............................."
+echo -e "Installation completed successfully."
