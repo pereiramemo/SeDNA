@@ -88,6 +88,31 @@ For example,
 ```
 sedna.sh --module run_antismash --params "--help"
 ```
+And we get the help instructions:
+```
+usage: run_antismash.py [-h] --input_sample INPUT_SAMPLE [--threads THREADS] [--sample_name SAMPLE_NAME] [--output_dir OUTPUT_DIR] [--overwrite] [--taxon TAXON]
+                        [--genefinding_tool GENEFINDING_TOOL] [--minlength MINLENGTH]
+
+Annotates BGC sequences utilizing the antiSMASH tool.
+
+options:
+  -h, --help            show this help message and exit
+  --input_sample INPUT_SAMPLE
+                        Input fasta file.
+  --threads THREADS     Number of threads.
+  --sample_name SAMPLE_NAME
+                        Sample name.
+  --output_dir OUTPUT_DIR
+                        Output directory.
+  --overwrite           Overwrite output directory.
+  --taxon TAXON         antiSMASH - {bacteria,fungi} Taxonomic classification of input sequence.
+  --genefinding_tool GENEFINDING_TOOL
+                        antiSMASH {glimmerhmm,prodigal,prodigal-m,none,error} Specify algorithm used for gene finding: GlimmerHMM, Prodigal, Prodigal Metagenomic/Anonymous mode, or none. The
+                        'error' option will raise an error if genefinding is attempted. The 'none' option will not run genefinding.
+  --minlength MINLENGTH
+                        antiSMASH - Only process sequences larger than <minlength>.
+                        
+```
 SeDNA is composed of different modules that must be run sequentially in a specific order.  
 First, we need to annotate the BGC sequences in the assembled metagenomics sequences of Metagenome-Assembled-Genomes (all as fasta files). In this example, we will be analyzing three toy MAGs from the [OceanDNA catalog](https://www.nature.com/articles/s41597-022-01392-5), which can be found in the `tests/data` folder with the repository. 
 The current version of SeDNA integrates three BGC annotation tools: [antiSMASH](https://github.com/antismash/antismash), [deepBGC](https://github.com/Merck/deepbgc), and [GECCO](https://github.com/zellerlab/GECCO). We can run these one-by-one, using the `run_<tool>` modules or all at once with the `run_all` module.
