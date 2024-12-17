@@ -49,14 +49,14 @@ try:
 except (FileNotFoundError, ValueError) as e:
     print(f"Error: {e}")
     sys.exit(1)
-    
+
 if threads <= 0:
     print(f"Error: Invalid number of threads. Must be a positive integer.")
     sys.exit(1)
-    
-if minlength <= 0:
-    print(f"Error: Invalid minimum length. Must be a positive integer.")
-    sys.exit(1)    
+
+# if minlength <= 0:
+#     print(f"Error: Invalid minimum length. Must be a positive integer.")
+#     sys.exit(1)    
 
 ###############################################################################
 ## 4. Define functions
@@ -94,8 +94,8 @@ def run_gecco(input_sample, output_dir):
         print("Error message:\n", result_gecco.stderr)
         sys.exit()
 
-        
-def move_gbks(gecco_gbk_list, output_dir)
+
+def move_gbks(gecco_gbk_list, output_dir):
     for file_path in gecco_gbk_list:
         file = os.path.basename(file_path)
         pattern = r'_cluster_(\d+)\.gbk'
