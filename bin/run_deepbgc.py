@@ -13,8 +13,7 @@ import shutil
 from Bio import SeqIO
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-bin_dir = os.path.dirname(current_dir)
-sys.path.append(f'{bin_dir}/src')
+sys.path.append(f'{current_dir}/src')
 from bgc_annot import utilities
 
 ###############################################################################
@@ -26,160 +25,214 @@ parser = argparse.ArgumentParser(prog='run_deepbgc.py', \
 
 # general parameters
 parser.add_argument("--input_sample", help="Input fasta file.")
-parser.add_argument("--threads", default = 4, help="Number of threads.")
+parser.add_argument("--threads", default = 4, type=int, help="Number of threads.")
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
 parser.add_argument("--output_dir", default = "sedna_output", help="Output directory.")
 parser.add_argument("--overwrite", action="store_true", help="Overwrite output directory.")
 # deepBGC parameters
-parser.add_argument("--deepbgc_score_thres", default = 0.75, help = "deepBGC - Threshold value to filter out deepBGC annotated BGC sequences.")
-parser.add_argument("--deepbgc_cds_count_thres", default = 2, help = "deepBGC - Threshold number of CDS to filter out deepBGC annotated BGC sequences.")
-
+parser.add_argument("--score_thres", default = 0.75,  type=float, help = "deepBGC - Threshold value to filter out deepBGC annotated BGC sequences.")
+parser.add_argument("--cds_count_thres", default = 2,  type=int, help = "deepBGC - Threshold number of CDS to filter out deepBGC annotated BGC sequences.")
+parser.add_argument("--minlength", default = 1000,  type=int, help = "deepBGC - Minimum BGC nucleotide length")
 
 # Get general parameters
 args = parser.parse_args()
 input_sample = args.input_sample
-threads = args.threads
+threads = int(args.threads)
 output_dir = args.output_dir
 sample_name = args.sample_name
 
 # Get deepBGC parameters
-deepbgc_score_thres = float(args.deepbgc_score_thres)
-deepbgc_cds_count_thres = int(args.deepbgc_cds_count_thres)
+score_thres = float(args.score_thres)
+cds_count_thres = int(args.cds_count_thres)
+minlength = int(args.minlength)
 
 ###############################################################################
-## 3. Sanity checks and initializations
+## 3. Sanity checks
 ###############################################################################
 
-# set metadata file names
-deepbgc_annot_metadata_tsv = None
-
-###############################################################################
-#### 4 Create output dirs
-###############################################################################
-
-###############################################################################
-#### 4.1 Main output dir
-###############################################################################
-
-output_dir = f'{output_dir}/{sample_name}'
-
-if args.overwrite and os.path.exists(output_dir):
-    try:
-        shutil.rmtree(output_dir)
-    except OSError as e:
-        print(f'Error: {e}')
-    try:       
-        os.makedirs(output_dir)
-    except Exception as e:
-        print(f'Error: {e}')
-        sys.exit(1)
-
-###############################################################################
-#### 4.2 bgc_annot/inter/ output dir
-###############################################################################
-
-bgc_annot_inter_dir = f"{output_dir}/bgc_annot/inter"
-
-if not os.path.exists(output_dir):
-    try:
-        os.makedirs(bgc_annot_inter_dir)
-    except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
-
-###############################################################################
-## 4.3. deepbgc output dir
-###############################################################################
-
-# create inter output
-bgc_annot_inter_deepbgc_dir = f"{bgc_annot_inter_dir}/deepbgc"
 try:
-    os.makedirs(bgc_annot_inter_deepbgc_dir)
-except Exception as e:
+    with open(input_sample, "r") as handle:
+        fasta_check = any(SeqIO.parse(handle, "fasta"))
+    if not fasta_check:
+        raise ValueError(f"{input_sample} contains no valid FASTA records.")
+except (FileNotFoundError, ValueError) as e:
     print(f"Error: {e}")
     sys.exit(1)
     
-bgc_annot_inter_deepbgc_output_dir = f"{bgc_annot_inter_deepbgc_dir}/output"
-try:
-    os.makedirs(bgc_annot_inter_deepbgc_output_dir)
-except Exception as e:
-    print(f"Error: {e}")
+if threads <= 0:
+    print(f"Error: Invalid number of threads. Must be a positive integer.")
     sys.exit(1)
+    
+if minlength <= 0:
+    print(f"Error: Invalid minimum length. Must be a positive integer.")
+    sys.exit(1)    
 
 ###############################################################################
-## 5. Run BGC annotation with deepbgc
+## 4. Define functions
 ###############################################################################
 
-# run command
-command_deepbgc = f"deepbgc pipeline \
-                  --detector deepbgc \
-                  --classifier product_class \
-                  --prodigal-meta-mode \
-                  --classifier-score {deepbgc_score_thres} \
-                  --min-domains {deepbgc_cds_count_thres} \
-                  --output {bgc_annot_inter_deepbgc_output_dir} \
-                  {input_sample}" 
+def remove_directory(path):
+    if os.path.exists(path):
+        try:
+            shutil.rmtree(path)
+        except OSError as e:
+            print(f'Error: {e}')
 
-result_deepbgc = subprocess.run(command_deepbgc, 
-                                  shell=True, 
-                                  stdout=subprocess.PIPE, 
-                                  stderr=subprocess.PIPE, 
-                                  text=True)
+def create_directory(path):
+    try:
+        os.makedirs(path, exist_ok=True)
+    except Exception as e:
+        print(f"Error creating directory {path}: {e}")
+        sys.exit(1)
 
-if result_deepbgc.returncode == 0:
-    print("deepBGC executed successfully")
+def run_deepbgc(input_sample, output_dir):
+    
+    command_deepbgc = f"deepbgc pipeline \
+                      --detector deepbgc \
+                      --classifier product_class \
+                      --prodigal-meta-mode \
+                      --min-nucl {minlength} \
+                      --output {output_dir} \
+                      {input_sample}" 
+
+    result_deepbgc = subprocess.run(command_deepbgc, 
+                                      shell=True, 
+                                      stdout=subprocess.PIPE, 
+                                      stderr=subprocess.PIPE, 
+                                      text=True)
+
+    if result_deepbgc.returncode != 0:
+        print("Error executing deepBGC")
+        print("Error message:\n", result_deepbgc.stderr)
+        sys.exit()
+
+        
+###############################################################################
+## 5. Create output dirs
+###############################################################################
+
+###############################################################################
+#### 5.1 Main output dir
+###############################################################################
+
+output_dir = os.path.join(output_dir, sample_name)
+
+if os.path.exists(output_dir):
+    if args.overwrite:
+        remove_directory(output_dir)
+        create_directory(output_dir)
 else:
-    print("Error executing deepBGC")
-    print("Error message:\n", result_deepbgc.stderr)
+    create_directory(output_dir)
+
+###############################################################################
+#### 5.2 bgc_annot/inter/ output dir
+###############################################################################
+
+bgc_annot_inter_dir = os.path.join(output_dir, "bgc_annot", "inter")
+create_directory(bgc_annot_inter_dir)
+
+###############################################################################
+#### 5.3. deepbgc output dir
+###############################################################################
+
+bgc_annot_inter_deepbgc_dir = os.path.join(bgc_annot_inter_dir, 'deepbgc')
+create_directory(bgc_annot_inter_deepbgc_dir)
+
+bgc_annot_inter_deepbgc_output_dir = os.path.join(bgc_annot_inter_deepbgc_dir, 'output')
+create_directory(bgc_annot_inter_deepbgc_output_dir)
+
+###############################################################################
+## 6. Check if deepbgc output exists 
+###############################################################################
+
+bgc_annot_inter_deepbgc_dir_gbks = os.path.join(bgc_annot_inter_deepbgc_dir, 'gbks')
+
+if os.path.exists(bgc_annot_inter_deepbgc_dir_gbks):
+    print(f"Directory '{bgc_annot_inter_deepbgc_dir_gbks}' already exists. Use --overwrite to overwrite.")
     sys.exit()
 
 ###############################################################################
-#### 6 deepBGC BGC metadata
+## 7. Run BGC annotation with deepbgc
 ###############################################################################
 
-# find the single GBK output file from deepBGC
+# run command
+run_deepbgc(input_sample = input_sample, 
+            output_dir = bgc_annot_inter_deepbgc_output_dir)
+
+###############################################################################
+## 8. Find GBK output (single) file from deepBGC
+###############################################################################
+
 deepbgc_output_gbk = utilities.find_files(input_dir = bgc_annot_inter_deepbgc_output_dir, 
                                           pattern = ".bgc.gbk")
+
+###############################################################################
+## 9. Split multiple GBK into different files
+###############################################################################
 
 if len(deepbgc_output_gbk) > 1:
     print("Error message:\nMore than one deepBGC GBK file output found\nThere should be only one.")
     print(deepbgc_output_gbk)
-    sys.exit() 
+    sys.exit(1)
 
-if len(deepbgc_output_gbk) == 1:
-    # split multiple GBK into different files
-    utilities.gbk_splitter(input_file = deepbgc_output_gbk[0],
-                           output_dir = f'{bgc_annot_inter_deepbgc_dir}/gbks', 
-                           sample_name = sample_name)
+if len(deepbgc_output_gbk) == 0:
+    print("No GBK files were generated by deepBGC")
+    print("No metadata file was generated after running deepBGC")
+    print("run_antismash.py executed successfully")
+    sys.exit()
+    
+create_directory(bgc_annot_inter_deepbgc_dir_gbks)
 
-    # Filter deepBGC outputs with low score
-    utilities.gbk_filter(input_dir = f'{bgc_annot_inter_deepbgc_dir}/gbks',
-                         sample_name = sample_name,
-                         deepbgc_score_thres = deepbgc_score_thres,
-                         deepbgc_cds_count_thres = deepbgc_cds_count_thres,
-                         output_dir = f'{bgc_annot_inter_deepbgc_dir}/gbks_removed')
+utilities.gbk_splitter(input_file = deepbgc_output_gbk[0],
+                       output_dir = bgc_annot_inter_deepbgc_dir_gbks, 
+                       sample_name = sample_name)
 
-# Get metadata
-deepbgc_annot_metadata = utilities.deepbgc_annot_parser(input_dir = f'{bgc_annot_inter_deepbgc_dir}/gbks',
+###############################################################################
+## 10. Filter deepBGC outputs with low score
+###############################################################################
+
+bgc_annot_inter_deepbgc_dir_gbks_removed = os.path.join(bgc_annot_inter_deepbgc_dir, 'gbks_removed')
+
+utilities.gbk_filter(input_dir = bgc_annot_inter_deepbgc_dir_gbks,
+                     sample_name = sample_name,
+                     deepbgc_score_thres = score_thres,
+                     deepbgc_cds_count_thres = cds_count_thres,
+                     output_dir = bgc_annot_inter_deepbgc_dir_gbks_removed)
+
+# Note: this filtering could have been done when running the tool; however, to be avoid running the tool
+# more than once to reduce stringency, this is done separately and the full output is kept (as obtained with default values).
+
+###############################################################################
+## 11. Get metadata
+###############################################################################
+
+deepbgc_annot_metadata = utilities.deepbgc_annot_parser(input_dir = bgc_annot_inter_deepbgc_dir_gbks,
                                                         sample_name = sample_name,
                                                         input_fasta = input_sample)
 
+###############################################################################
+## 12. Export metadata
+###############################################################################
 
-# Export metadata
 if deepbgc_annot_metadata is not None:
-    deepbgc_annot_metadata_tsv = f'{bgc_annot_inter_deepbgc_dir}/annot_metadata.tsv'
+    deepbgc_annot_metadata_tsv = os.path.join(bgc_annot_inter_deepbgc_dir,'annot_metadata.tsv')
     deepbgc_annot_metadata.to_csv(deepbgc_annot_metadata_tsv, sep='\t', index=False)
 else:
-    deepbgc_annot_metadata_tsv = None
-
+    print("No metadata file was generated after running deepBGC")
 
 ###############################################################################
-#### 7 Format deepBGC GBKs
+## 13. Format deepBGC GBKs
 ###############################################################################
 
-if deepbgc_annot_metadata_tsv is not None:
+if deepbgc_annot_metadata is not None:
     
-    utilities.format_gbks(input_dir = f'{bgc_annot_inter_deepbgc_dir}/gbks',
+    utilities.format_gbks(input_dir = bgc_annot_inter_deepbgc_dir_gbks,
                           input_tsv = deepbgc_annot_metadata_tsv,
-                          output_dir = f'{bgc_annot_inter_deepbgc_dir}/gbks',
+                          output_dir = bgc_annot_inter_deepbgc_dir_gbks,
                           tool = "deepbgc")
+
+###############################################################################
+## 14. Print output message
+###############################################################################
+    
+print("run_deepbgc.py executed successfully")

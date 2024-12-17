@@ -1,93 +1,113 @@
 #!/bin/bash
+
+###############################################################################
+# 1. Set env
+###############################################################################
+
 SCRIPT_PATH=$(realpath $0)
 SCRIPT_DIRECTORY=$(realpath $(dirname $0))
 SEDNA_REPOSITORY_DIRECTORY=$(realpath ${SCRIPT_DIRECTORY}/../)
 
-LOG_DIRECTORY=${1:-"logs/sedna_installation"}
-mkdir -pv ${LOG_DIRECTORY}
+LOG_DIRECTORY="logs/sedna_installation"
+LOG_FILE="${LOG_DIRECTORY}/sedna_install.log"
+CONDA_ENVS_PATH=${1:-"$(conda info --base)/envs/"}
 
-CONDA_ENVS_PATH=${2:-"$(conda info --base)/envs/"}
+check_exit_status() {
+    if [[ $1 -ne 0 ]]; then
+        echo "$2"
+        echo "See ${LOG_FILE} for details."
+        exit $1
+    fi
+}
+
+check_command() {
+    command -v "$1" &> /dev/null || { echo "Error: $1 is not installed. Please install it before running the script."; exit 1; }
+}
+
+# Initialize Conda
+eval "$(conda shell.bash hook)"
 
 ###############################################################################
-# Update permissions
+# 2. Sanity checks
+###############################################################################
+
+check_command conda
+check_command mamba
+
+if [[ ! -d "${LOG_DIRECTORY}" ]]; then
+  mkdir -pv  "${LOG_DIRECTORY}"
+  check_exit_status $? "Creating ${LOG_DIRECTORY} failed."
+fi
+
+if  [[ -f "${LOG_FILE}" ]]; then
+  rm "${LOG_FILE}"
+  check_exit_status $? "Removing ${LOG_FILE} failed."
+fi
+
+###############################################################################
+# 3. Update permissions
 ###############################################################################
 
 echo "Updating permissions for scripts in ${SEDNA_REPOSITORY_DIRECTORY}/bin"
-chmod 775 "${SEDNA_REPOSITORY_DIRECTORY}/bin/sedna.sh"
-chmod 775 "${SEDNA_REPOSITORY_DIRECTORY}/bin/"*.py
+chmod 775 "${SEDNA_REPOSITORY_DIRECTORY}/bin/sedna.sh" &>> "${LOG_FILE}"
+check_exit_status $? "Updating permissions for ${SEDNA_REPOSITORY_DIRECTORY}/bin/sedna.sh failed"
+chmod 775 "${SEDNA_REPOSITORY_DIRECTORY}/bin/"*.py &>> "${LOG_FILE}"
+check_exit_status $? "Updating permissions for ${SEDNA_REPOSITORY_DIRECTORY}/bin/*.py failed"
 
 ###############################################################################
-# Main environemnt
+# 4. Create main environemnt
 ###############################################################################
 
-echo "Creating sedna main environment"
+echo "Creating SeDNA main environment"
 
 ENV_NAME="sedna_main_env"
-conda create -y -p ${CONDA_ENVS_PATH}/${ENV_NAME} -c conda-forge -c bioconda &> ${LOG_DIRECTORY}/sedna.log
-
-EXIT_STATUS=$?
-if [[ ${EXIT_STATUS} -ne 0 ]]; then
-    echo "conda create failed. See logs/sedna_installation/sedna.log for details."
-    exit ${EXIT_STATUS}
-fi
+mamba create -y -p ${CONDA_ENVS_PATH}/${ENV_NAME} -c conda-forge -c bioconda &>> "${LOG_FILE}"
+check_exit_status $? "Creating conda envrionment ${CONDA_ENVS_PATH}/${ENV_NAME} failed."
 
 # Copy bin directory to sedna main environment
 echo -e "\t*Copying sedna bin into ${ENV_NAME} environment path."
-cp -r "${SEDNA_REPOSITORY_DIRECTORY}/bin" "${CONDA_ENVS_PATH}/${ENV_NAME}/" &> ${LOG_DIRECTORY}/sedna.log
+cp -r "${SEDNA_REPOSITORY_DIRECTORY}/bin" "${CONDA_ENVS_PATH}/${ENV_NAME}/" &>> "${LOG_FILE}"
+check_exit_status $? "Copying ${SEDNA_REPOSITORY_DIRECTORY}/bin failed."
 
-EXIT_STATUS=$?
-if [[ ${EXIT_STATUS} -ne 0 ]]; then
-    echo "Copying sedna bin into ${ENV_NAME} environment path. See logs/sedna_installation/sedna.log for details."
-    exit ${EXIT_STATUS}
-fi
-
-# Version
-cp ${SEDNA_REPOSITORY_DIRECTORY}/bin/VERSION.txt ${CONDA_ENVS_PATH}/${ENV_NAME}/bin/VERSION.txt &> ${LOG_DIRECTORY}/sedna.log
-
-EXIT_STATUS=$?
-if [[ ${EXIT_STATUS} -ne 0 ]]; then
-    echo "Copying sedna version file into ${ENV_NAME} environment path failed. See logs/sedna_installation/sedna.log for details."
-    exit ${EXIT_STATUS}
-fi
+# Copy version file
+cp "${SEDNA_REPOSITORY_DIRECTORY}/bin/VERSION.txt" "${CONDA_ENVS_PATH}/${ENV_NAME}/bin/VERSION.txt" &>> "${LOG_FILE}"
+check_exit_status $? "Copying ${SEDNA_REPOSITORY_DIRECTORY}/bin/VERSION.txt failed."
 
 ###############################################################################
-# Module environemnt
+# 5. Module environemnt
 ###############################################################################
 
-for ENV_YAML in ${SEDNA_REPOSITORY_DIRECTORY}/install/environments/sedna_*.yml; do
+for ENV_YAML in "${SEDNA_REPOSITORY_DIRECTORY}/install/environments/sedna_"*.yml; do
+
+   if [[ ! -f "${ENV_YAML}" ]]; then
+        echo "Error: Environment file ${ENV_YAML} does not exist." &>> "${LOG_FILE}"
+        exit 1
+   fi
+
     # Get environment name
-    ENV_NAME=$(basename $ENV_YAML .yml)
-
+    ENV_NAME=$(basename "${ENV_YAML}" .yml)
+     
     # Create conda environment
     echo "Creating ${ENV_NAME} module environment"
-    conda create -f "${ENV_YAML}" -p "${CONDA_ENVS_PATH}/${ENV_NAME}" &> "${LOG_DIRECTORY}/${ENV_NAME}.log"
-    
-    EXIT_STATUS=$?
-    if [[ ${EXIT_STATUS} -ne 0 ]]; then
-        echo "Creating ${ENV_NAME} module environment. See logs/sedna_installation/sedna.log for details."
-        exit ${EXIT_STATUS}
-    fi
-
+    mamba env create -y -f "${ENV_YAML}" -p "${CONDA_ENVS_PATH}/${ENV_NAME}" &>> "${LOG_FILE}"
+    check_exit_status $? "Creating conda environment ${ENV_YAML} failed."
+   
     # Copy over files to environment bin/
     echo -e "\t*Copying sedna modules into ${ENV_NAME} environment path"
-    cp -r "${SEDNA_REPOSITORY_DIRECTORY}/bin/"*.py "${CONDA_ENVS_PATH}/${ENV_NAME}/bin/" &> "${LOG_DIRECTORY}/${ENV_NAME}.log"
+    cp -r "${SEDNA_REPOSITORY_DIRECTORY}/bin/"*.py "${CONDA_ENVS_PATH}/${ENV_NAME}/bin/" &>> "${LOG_FILE}"
+    check_exit_status $? "Copying sedna modules into ${ENV_NAME} failed."
+    cp -r "${SEDNA_REPOSITORY_DIRECTORY}/bin/src" "${CONDA_ENVS_PATH}/${ENV_NAME}/bin/" &>> "${LOG_FILE}"
+    check_exit_status $? "Copying sedna src code into ${ENV_NAME} failed."
     
-    EXIT_STATUS=$?
-    if [[ ${EXIT_STATUS} -ne 0 ]]; then
-        echo "Copying sedna modules into ${ENV_NAME} environment path. See logs/sedna_installation/sedna.log for details."
-        exit ${EXIT_STATUS}
-    fi
-
-    # Version
-    cp ${SEDNA_REPOSITORY_DIRECTORY}/bin/VERSION.txt ${CONDA_ENVS_PATH}/${ENV_NAME}/bin/VERSION.txt &> ${LOG_DIRECTORY}/sedna.log
+    # Copy version file
+    cp "${SEDNA_REPOSITORY_DIRECTORY}/bin/VERSION.txt" "${CONDA_ENVS_PATH}/${ENV_NAME}/bin/VERSION.txt" &>> "${LOG_FILE}"
+    check_exit_status $? "Copying ${SEDNA_REPOSITORY_DIRECTORY}/bin/VERSION.txt failed."
     
-    EXIT_STATUS=$?
-    if [[ ${EXIT_STATUS} -ne 0 ]]; then
-        echo "Copying sedna version file into ${ENV_NAME} environment path failed. See logs/sedna_installation/sedna.log for details."
-        exit ${EXIT_STATUS}
-    fi
-
 done
+
+###############################################################################
+# 6. Exit installation script
+###############################################################################
 
 echo -e "..............................."
 echo -e "     Installation Complete     "
