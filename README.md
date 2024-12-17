@@ -9,7 +9,6 @@ The tasks performed by Sedna are the following.
 **BGC clustering**. To organize the large diversity of BGC sequences found in microbial communities, we implemented a novel clustering methodology to group BGC sequences responsible for producing similar compounds into Gene Cluster Families (GCFs).  
 **Functional annotation**. By integrating BGC reference databases, such as MIBiG, into our clustering methodology, the pipeline provides a functional and novelty assessment of environmental BGC sequences. Additionally, the GCF composition can be used to estimate the biosynthetic diversity in metagenomic samples. These analyses help identify candidate BGC sequences for specific industrial applications and facilitate the selection of taxa or environments with high biosynthetic novelty and diversity.  
 
-
 # How to install
 
 ### Recommended Pre-installation Steps
@@ -59,3 +58,27 @@ cd SeDNA
 ```
 ./install/get_databases.sh
 ```
+
+# Getting started
+
+After installing SeDNA, you first need to activate the main environment.
+```
+conda activate sedna_main_env
+```
+Now, you should be able to run the SeDNA wrapping script:
+```
+sedna.sh --help
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
