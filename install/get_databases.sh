@@ -48,30 +48,36 @@ fi
 # 3. Create the database directory if it doesn't exist
 ###############################################################################
 
-if [[ ! -d "${DATABASE_DIR}" ]]; then
-     
+if [[ ! -d "${DATABASE_DIR}" ]]; then   
     mkdir -pv "${DATABASE_DIR}" 2>> "${LOG_FILE}"
     check_exit_status $? "Creating ${DATABASE_DIR} failed."
-  
+fi
+
+if [[ ! -d "${DATABASE_DIR}/sedna/embeddings" ]]; then
     mkdir -pv "${DATABASE_DIR}/sedna/embeddings" 2>> "${LOG_FILE}"
     check_exit_status $? "Creating ${DATABASE_DIR}/sedna/embeddings failed."
+fi
 
+if [[ ! -d "${DATABASE_DIR}/pfam" ]]; then
     mkdir -pv "${DATABASE_DIR}/pfam" 2>> "${LOG_FILE}"
     check_exit_status $? "Creating ${DATABASE_DIR}/pfam failed."
+fi
 
+if [[ ! -d "${DATABASE_DIR}/antismash" ]]; then
     mkdir -pv "${DATABASE_DIR}/antismash" 2>> "${LOG_FILE}"
     check_exit_status $? "Creating ${DATABASE_DIR}/antismash failed."
-    
-    mkdir -pv "${DATABASE_DIR}/deepbgc" 2>> "${LOG_FILE}"
-    check_exit_status $? "Creating ${DATABASE_DIR}/deepbgc failed."
+fi    
+    # mkdir -pv "${DATABASE_DIR}/deepbgc" 2>> "${LOG_FILE}"
+    # check_exit_status $? "Creating ${DATABASE_DIR}/deepbgc failed."
 
-fi
 
 ###############################################################################
 # 4. Download and unzip the Pfam database
 ###############################################################################
 
 PFAM_URL="ftp://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.gz"
+
+ls "${DATABASE_DIR}" 
 
 if [[ ! -f "${DATABASE_DIR}/Pfam-A.hmm" ]]; then
 
