@@ -15,6 +15,7 @@ from sklearn.cluster import Birch
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 resources_dir=os.path.join(os.path.dirname(current_dir),"resources")
+home_directory = os.getenv('HOME')
 
 ###############################################################################
 ## 2. Parse input data and optional arguments
@@ -27,7 +28,7 @@ parser = argparse.ArgumentParser(prog='cluster.py', \
 parser.add_argument("--input_dir", help="Input directory containing the .*_annotdoms_resolved.tsv files.")
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
 parser.add_argument("--threshold", default = 1, help="BIRCH clustering threshold")
-parser.add_argument("--embeddings_file", default = f"{resources_dir}/embeddings/domain_embeddings_mibig3.1_noref_pfam.pkl", help="Domain embeddings pkl file.")
+parser.add_argument("--embeddings_file", default = f"{home_directory}/.local/share/sedna/embeddings/domain_embeddings_mibig3.1_noref_pfam.pkl", help="Domain embeddings pkl file.")
 parser.add_argument("--output_tsv", default = "bgc_clust_output.tsv", help="Output clustering table (tsv).")
 parser.add_argument("--overwrite", action="store_true", help="Overwrite output directory.")
 
