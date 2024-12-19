@@ -71,7 +71,7 @@ sedna.sh --help
 ```
 We get the following help instructions:
 ```
-Usage: ./bin/sedna.sh [-m <module>] [-o <options>] [-v|--version] [-h|--help]
+Usage: sedna.sh [-m <module>] [-o <options>] [-v|--version] [-h|--help]
  
 Options:
   -m, --module    Specify the module. Available modules: run_antismash run_deepbgc run_gecco run_all dereplicate annot_cds cluster_mean cluster_sif
@@ -115,16 +115,20 @@ options:
 ```
 SeDNA is composed of different modules that must be run sequentially in a specific order.
 
-First, we need to annotate the BGC sequences in the assembled metagenomic sequences of Metagenome-Assembled Genomes (MAGs), provided as FASTA files. In this example, we will analyze three toy MAGs from the [OceanDNA catalog](https://www.nature.com/articles/s41597-022-01392-5), which can be found in the tests/data folder within the repository.
+First, we need to annotate the BGC sequences in the assembled metagenomic sequences or Metagenome-Assembled Genomes (MAGs), provided as FASTA files. In this example, we will analyze three toy MAGs from the  [OceanDNA catalog](https://www.nature.com/articles/s41597-022-01392-5), artificially subsampled to include only a few BGCs, which can be found in the tests/data folder within the repository.
 
 The current version of SeDNA integrates three BGC annotation tools: [antiSMASH](https://github.com/antismash/antismash), [deepBGC](https://github.com/Merck/deepbgc), and [GECCO](https://github.com/zellerlab/GECCO). These tools can be run individually using the `run_<tool>` modules or all at once using the `run_all` option.
 
-Let’s navigate to the root of the repository and store all the sample files in a variable:
+Let’s navigate to the root of the repository (if you are not already there) and store all the sample files in a variable:
+
+```
+cd <path-to>/SeDNA
+```
 
 ```
 SAMPLES=$(ls "tests/data/OceanDNA"-*_redu.fasta)
 ```
-Let's use the `tests` folder to save our example analysis.
+We will use the `tests` folder to save our example analysis.
 ```
 OUTPUT_DIR=./tests/output/sedna_output
 ```
@@ -192,4 +196,13 @@ The file `${OUTPUT_DIR}/bgc_embeddings.tsv` contains the embedding of each BGC, 
 
 The file `${OUTPUT_DIR}/clust.tsv` contains the actual clustering as a two-column TSV table, with the BGC ID and the Gene Cluster Family (GCF) ID in the first and second columns, respectively.
 
+
+### Uninstallation
+
+To uninstall, simply run the script `uninstall.sh` located within the `install` directory.
+This will remove all the Conda environments and databases downloaded for using SeDNA.
+
+```
+./install/uninstall.sh
+```
 
