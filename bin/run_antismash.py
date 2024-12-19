@@ -101,9 +101,9 @@ def run_antismash(input_sample, output_dir, threads = threads,
         input_sample (str): Path to the input sample file (FASTA format).
         output_dir (str): Directory to save the output.
         threads (int, optional): Number of CPU threads to use. Default is 4.
-        genefinding_tool (str, optional): Gene-finding tool to use (e.g., 'prodigal'). Default is 'prodigal'.
-        taxon (str, optional): Taxon of the sample (e.g., 'bacteria'). Default is 'bacteria'.
-        minlength (int, optional): Minimum sequence length for analysis. Default is 2000.
+        genefinding_tool (str, optional): Gene-finding tool to use (e.g., 'prodigal').
+        taxon (str, optional): Taxon of the sample (e.g., 'bacteria').
+        minlength (int, optional): Minimum sequence length for analysis.
 
     Raises:
         RuntimeError: If the antiSMASH pipeline execution fails.
