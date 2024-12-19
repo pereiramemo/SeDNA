@@ -92,6 +92,12 @@ for ENV_YAML in "${SEDNA_REPOSITORY_DIRECTORY}/install/environments/sedna_"*.yml
     mamba env create -y -f "${ENV_YAML}" -p "${CONDA_ENVS_PATH}/${ENV_NAME}" &>> "${LOG_FILE}"
     check_exit_status $? "Creating conda environment ${ENV_YAML} failed."
    
+    # Make sure bin dir exists
+    if [[ ! -f "${CONDA_ENVS_PATH}/${ENV_NAME}/bin/" ]]; then
+        mkdir "${CONDA_ENVS_PATH}/${ENV_NAME}/bin/" &>> "${LOG_FILE}"
+        check_exit_status $? "Creating ${CONDA_ENVS_PATH}/${ENV_NAME}/bin/ failed."
+    fi
+
     # Copy over files to environment bin/
     echo -e "\t*Copying sedna modules into ${ENV_NAME} environment path"
     cp -r "${SEDNA_REPOSITORY_DIRECTORY}/bin/"*.py "${CONDA_ENVS_PATH}/${ENV_NAME}/bin/" &>> "${LOG_FILE}"
