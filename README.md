@@ -166,7 +166,6 @@ Let’s take a look at one of these:
 ```
 ls ${OUTPUT_DIR}/OceanDNA-b11979_redu/bgc_annot/sorted/dereplicated/
 ```
-
 Once we obtain the de-replicated catalog, we will cluster the BGC sequences predicted in the three samples.
 To do this, we must annotate the Pfam domains using the `cds_annot` module:
 
@@ -195,7 +194,6 @@ sedna.sh --module cluster_sif \
 The file `${OUTPUT_DIR}/bgc_embeddings.tsv` contains the embedding of each BGC, which can be useful for downstream analysis, such as novelty or diversity assessment.
 
 The file `${OUTPUT_DIR}/clust.tsv` contains the actual clustering as a two-column TSV table, with the BGC ID and the Gene Cluster Family (GCF) ID in the first and second columns, respectively.
-
 
 ### Uninstallation
 
