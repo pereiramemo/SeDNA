@@ -31,7 +31,7 @@ parser = argparse.ArgumentParser(prog='cluster.py', \
 parser.add_argument("--input_dir", help="Input directory containing the .*_annotdoms_resolved.tsv files.")
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
 parser.add_argument("--threshold", default = 1, help="BIRCH clustering threshold")
-parser.add_argument("--embeddings_file", default = f"{home_directory}/.local/share/sedna/embeddings/domain_embeddings_mibig3.1_noref_pfam.pkl", help="Domain embeddings pkl file.")
+parser.add_argument("--embeddings_file", default = f"{home_directory}/.local/share/sedna/embeddings/dom_embeddings_mtx_mibig_pfam.pkl", help="Domain embeddings pkl file.")
 parser.add_argument("--counts_file", default = f"{home_directory}/.local/share/sedna/embeddings/domain2counts_mibig3.1_vs_pfam.pkl", help="Domain counts pkl file.")
 parser.add_argument("--alpha", default = 0.001, help="SIF a parameter. Default: 0.001.")
 parser.add_argument("--bgc_embeddings_tsv", default = None, help="BGC embeddings output table (tsv)")
