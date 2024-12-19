@@ -90,31 +90,57 @@ def create_directory(path):
     except Exception as e:
         print(f"Error creating directory {path}: {e}")
         sys.exit(1)
-                
-def run_antismash(input_sample, output_dir):
+
+def run_antismash(input_sample, output_dir, threads = threads, 
+                  genefinding_tool = genefinding_tool, taxon = taxon, 
+                  minlength = minlength):
+    """
+    Run the antiSMASH pipeline with the specified parameters.
+
+    Args:
+        input_sample (str): Path to the input sample file (FASTA format).
+        output_dir (str): Directory to save the output.
+        threads (int, optional): Number of CPU threads to use. Default is 4.
+        genefinding_tool (str, optional): Gene-finding tool to use (e.g., 'prodigal'). Default is 'prodigal'.
+        taxon (str, optional): Taxon of the sample (e.g., 'bacteria'). Default is 'bacteria'.
+        minlength (int, optional): Minimum sequence length for analysis. Default is 2000.
+
+    Raises:
+        RuntimeError: If the antiSMASH pipeline execution fails.
+    """
     command_antismash = [
-                        "antismash", 
-                         "--cpus", threads,
-                         "--genefinding-tool", genefinding_tool,
-                         "--taxon", taxon,
-                         "--allow-long-headers",
-                         "--minlength", minlength,
-                         "--minimal",
-                         "--output-dir", output_dir,
-                         input_sample
-                        ]
+        "antismash",
+        "--cpus", str(threads),
+        "--genefinding-tool", genefinding_tool,
+        "--taxon", taxon,
+        "--allow-long-headers",
+        "--minlength", str(minlength),
+        "--minimal",
+        "--output-dir", output_dir,
+        input_sample
+    ]
 
-    result_antismash = subprocess.run(command_antismash, 
-                                      shell=True, 
-                                      stdout=subprocess.PIPE, 
-                                      stderr=subprocess.PIPE, 
-                                      text=True)
+    try:
+        # Run the antiSMASH command
+        result_antismash = subprocess.run(
+            command_antismash,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True  # Automatically raises CalledProcessError on failure
+        )
+        print("antiSMASH executed successfully.")
+        print("Output:\n", result_antismash.stdout)
 
-    if result_antismash.returncode != 0:
-        print("Error executing antiSMASH")
-        print("Error message:\n", result_antismash.stderr)
-        sys.exit(1)
-        
+    except subprocess.CalledProcessError as e:
+        # Construct a detailed error message
+        error_msg = (
+            f"Error executing antiSMASH:\n"
+            f"Command: {' '.join(command_antismash)}\n"
+            f"Error Message: {e.stderr.strip()}"
+        )
+        raise RuntimeError(error_msg) from e
+
 ###############################################################################
 #### 5 Create output dirs
 ###############################################################################

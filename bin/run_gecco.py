@@ -29,6 +29,10 @@ parser.add_argument("--threads", default = 4, type = int, help="Number of thread
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
 parser.add_argument("--output_dir",  default = "sedna_output", help="Output directory.")
 parser.add_argument("--overwrite", action="store_true", help="Overwrite output directory.")
+# GECCO parameters
+parser.add_argument("--score_thres", default = 0.80,  type=float, help = "GECCO - Probability threshold for cluster detection.")
+parser.add_argument("--cds_count_thres", default = 3,  type=int, help = "GECCO - Minimum number of coding sequences a valid cluster must contain.")
+
 
 # Get general parameters
 args = parser.parse_args()
@@ -36,6 +40,10 @@ input_sample = args.input_sample
 threads = int(args.threads)
 output_dir = args.output_dir
 sample_name = args.sample_name
+
+# Get GECCO parameters
+score_thres = float(args.score_thres)
+cds_count_thres = int(args.cds_count_thres)
 
 ###############################################################################
 ## 3. Sanity checks
@@ -75,28 +83,7 @@ def create_directory(path):
     except Exception as e:
         print(f"Error creating directory {path}: {e}")
         sys.exit(1)
-
-def run_gecco(input_sample, output_dir):
-
-    command_gecco = [
-                     "gecco", "run",
-                     "--genome", input_sample,
-                     "--jobs", threads,
-                     "--output-dir", output_dir
-                    ]
-
-    result_gecco = subprocess.run(command_gecco, 
-                                  shell=True, 
-                                  stdout=subprocess.PIPE, 
-                                  stderr=subprocess.PIPE, 
-                                  text=True)
-
-    if result_gecco.returncode != 0:
-        print("Error executing gecco")
-        print("Error message:\n", result_gecco.stderr)
-        sys.exit()
-
-
+        
 def move_gbks(gecco_gbk_list, output_dir):
     for file_path in gecco_gbk_list:
         file = os.path.basename(file_path)
@@ -107,6 +94,51 @@ def move_gbks(gecco_gbk_list, output_dir):
         file_path_renamed = os.path.join(output_dir, file_renamed)
         shutil.copy(file_path, file_path_renamed)
 
+def run_gecco(input_sample, output_dir, threads=threads,
+             cds_count_thres = cds_count_thres, score_thres = score_thres):
+    """
+    Run the Gecco tool with the specified parameters.
+
+    Args:
+        input_sample (str): Path to the input genome file.
+        output_dir (str): Directory to store the output.
+        threads (int, optional): Number of CPU threads to use.
+        cds_count_thres (int, optional): Minimum number of CDS.
+        score_thres (int, optional): Threshold for calling BGC.
+
+    Raises:
+        RuntimeError: If the Gecco tool execution fails.
+    """
+    command_gecco = [
+        "gecco", "run",
+        "--genome", input_sample,
+        "--cds", str(cds_count_thres),
+        "--threshold", str(score_thres),
+        "--jobs", str(threads),
+        "--output-dir", output_dir
+    ]
+
+    try:
+        # Run the command
+        result_gecco = subprocess.run(
+            command_gecco,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True  # Automatically raises CalledProcessError on failure
+        )
+        print("Gecco executed successfully.")
+        print("Output:\n", result_gecco.stdout)
+
+    except subprocess.CalledProcessError as e:
+        # Construct a detailed error message
+        error_msg = (
+            f"Error executing Gecco:\n"
+            f"Command: {' '.join(command_gecco)}\n"
+            f"Error Message: {e.stderr.strip()}"
+        )
+        raise RuntimeError(error_msg) from e
+                
 ###############################################################################
 ## 5. Create output dirs
 ###############################################################################

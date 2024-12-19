@@ -30,8 +30,8 @@ parser.add_argument("--sample_name", default = "sample", help="Sample name.")
 parser.add_argument("--output_dir", default = "sedna_output", help="Output directory.")
 parser.add_argument("--overwrite", action="store_true", help="Overwrite output directory.")
 # deepBGC parameters
-parser.add_argument("--score_thres", default = 0.75,  type=float, help = "deepBGC - Threshold value to filter out deepBGC annotated BGC sequences.")
-parser.add_argument("--cds_count_thres", default = 2,  type=int, help = "deepBGC - Threshold number of CDS to filter out deepBGC annotated BGC sequences.")
+parser.add_argument("--score_thres", default = 0.80,  type=float, help = "deepBGC - Threshold value to filter out deepBGC annotated BGC sequences.")
+parser.add_argument("--cds_count_thres", default = 3,  type=int, help = "deepBGC - Threshold number of CDS to filter out deepBGC annotated BGC sequences.")
 parser.add_argument("--minlength", default = 1000,  type=int, help = "deepBGC - Minimum BGC nucleotide length")
 
 # Get general parameters
@@ -85,30 +85,52 @@ def create_directory(path):
         print(f"Error creating directory {path}: {e}")
         sys.exit(1)
 
-def run_deepbgc(input_sample, output_dir):
-    
+import subprocess
+
+def run_deepbgc(input_sample, output_dir, minlength = minlength):
+    """
+    Run the DeepBGC pipeline with the specified parameters.
+
+    Args:
+        input_sample (str): Path to the input sample file.
+        output_dir (str): Directory to save the output.
+        minlength (int): Minimum nucleotide length for processing.
+
+    Raises:
+        RuntimeError: If the DeepBGC pipeline execution fails.
+    """
+    # Ensure minlength is passed as a string
     command_deepbgc = [
-                      "deepbgc", "pipeline",
-                      "--detector", "deepbgc",
-                      "--classifier", "product_class",
-                      "--prodigal-meta-mode",
-                      "--min-nucl", minlength,
-                      "--output", output_dir,
-                      input_sample
-                      ]
+        "deepbgc", "pipeline",
+        "--detector", "deepbgc",
+        "--classifier", "product_class",
+        "--prodigal-meta-mode",
+        "--min-nucl", str(minlength),
+        "--output", output_dir,
+        input_sample
+    ]
 
-    result_deepbgc = subprocess.run(command_deepbgc, 
-                                      shell=True, 
-                                      stdout=subprocess.PIPE, 
-                                      stderr=subprocess.PIPE, 
-                                      text=True)
+    try:
+        # Run the command
+        result_deepbgc = subprocess.run(
+            command_deepbgc,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True  # Raises CalledProcessError if the command fails
+        )
+        print("DeepBGC executed successfully.")
+        print("Output:\n", result_deepbgc.stdout)
 
-    if result_deepbgc.returncode != 0:
-        print("Error executing deepBGC")
-        print("Error message:\n", result_deepbgc.stderr)
-        sys.exit()
+    except subprocess.CalledProcessError as e:
+        # Handle and raise a more descriptive error
+        error_msg = (
+            f"Error executing DeepBGC pipeline:\n"
+            f"Command: {' '.join(command_deepbgc)}\n"
+            f"Error Message: {e.stderr.strip()}"
+        )
+        raise RuntimeError(error_msg) from e
 
-        
 ###############################################################################
 ## 5. Create output dirs
 ###############################################################################
