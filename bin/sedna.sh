@@ -97,7 +97,7 @@ case "${MODULE}" in
         ;;
     "run_gecco")
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_gecco_env
-         "${BIN_DIRECTORY}"/run_gecco.py $PARAMS
+        run_gecco.py $PARAMS
         ;;
     "run_all")
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_deepbgc_env
