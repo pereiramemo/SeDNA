@@ -198,7 +198,7 @@ The file `${OUTPUT_DIR}/clust.tsv` contains the actual clustering as a two-colum
 ### Uninstallation
 
 To uninstall, simply run the script `uninstall.sh` located within the `install` directory.
-This will remove all the Conda environments and databases downloaded for using SeDNA.
+This will remove all the Conda environments and databases downloaded to run SeDNA.
 
 ```
 ./install/uninstall.sh
