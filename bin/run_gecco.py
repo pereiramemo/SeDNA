@@ -127,8 +127,6 @@ def run_gecco(input_sample, output_dir, threads=threads,
             text=True,
             check=True  # Automatically raises CalledProcessError on failure
         )
-        print("Gecco executed successfully.")
-        print("Output:\n", result_gecco.stdout)
 
     except subprocess.CalledProcessError as e:
         # Construct a detailed error message

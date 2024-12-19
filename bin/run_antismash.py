@@ -129,8 +129,6 @@ def run_antismash(input_sample, output_dir, threads = threads,
             text=True,
             check=True  # Automatically raises CalledProcessError on failure
         )
-        print("antiSMASH executed successfully.")
-        print("Output:\n", result_antismash.stdout)
 
     except subprocess.CalledProcessError as e:
         # Construct a detailed error message

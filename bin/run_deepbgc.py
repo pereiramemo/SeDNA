@@ -119,8 +119,6 @@ def run_deepbgc(input_sample, output_dir, minlength = minlength):
             text=True,
             check=True  # Raises CalledProcessError if the command fails
         )
-        print("DeepBGC executed successfully.")
-        print("Output:\n", result_deepbgc.stdout)
 
     except subprocess.CalledProcessError as e:
         # Handle and raise a more descriptive error
