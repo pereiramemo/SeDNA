@@ -93,7 +93,7 @@ for ENV_YAML in "${SEDNA_REPOSITORY_DIRECTORY}/install/environments/sedna_"*.yml
     check_exit_status $? "Creating conda environment ${ENV_YAML} failed."
    
     # Make sure bin dir exists
-    if [[ ! -f "${CONDA_ENVS_PATH}/${ENV_NAME}/bin/" ]]; then
+    if [[ ! -d "${CONDA_ENVS_PATH}/${ENV_NAME}/bin/" ]]; then
         mkdir "${CONDA_ENVS_PATH}/${ENV_NAME}/bin/" &>> "${LOG_FILE}"
         check_exit_status $? "Creating ${CONDA_ENVS_PATH}/${ENV_NAME}/bin/ failed."
     fi
