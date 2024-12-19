@@ -152,7 +152,7 @@ Since we are annotating the same sequences with different tools, it is expected 
 ```
 for s in ${SAMPLES}; do
 
-    SAMPLE_NAME=$(basename "${s}" .fa)
+    SAMPLE_NAME=$(basename "${s}" .fasta)
     echo "${SAMPLE_NAME}"
     sedna.sh --module dereplicate \
     --params "--input_dir ${OUTPUT_DIR}/${SAMPLE_NAME}/bgc_annot/inter"
@@ -173,7 +173,7 @@ To do this, we must annotate the Pfam domains using the `cds_annot` module:
 ```
 for s in ${SAMPLES}; do
 
-      SAMPLE_NAME=$(basename "${s}" .fa)
+      SAMPLE_NAME=$(basename "${s}" .fasta)
       echo "${SAMPLE_NAME}"
            sedna.sh --module annot_cds \
            --params "--input_dir ${OUTPUT_DIR}/${SAMPLE_NAME}/bgc_annot/sorted/dereplicated"
