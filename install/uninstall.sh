@@ -27,18 +27,25 @@ check_command() {
 check_command mamba
 
 ###############################################################################
-## 3. Remove environments
+## 3. Remove main environment
+###############################################################################
+
+echo "Removing conda environment: sedna_main_env"
+mamba env remove -y -n sedna_main_env
+check_exit_status $? "Removing sedna_main_env failed."
+
+###############################################################################
+## 4. Remove module environments
 ###############################################################################
 
 for ENV_YAML in "${SEDNA_REPOSITORY_DIRECTORY}/install/environments/sedna_"*.yml; do
 
-    
     ENV_NAME=$(basename "${ENV_YAML}" .yml)
     ENV_PATH=$(conda env list | egrep "${ENV_NAME}" | awk '{print $NF}')
     if [[ -d "${ENV_PATH}" ]]; then
     
         echo "Removing conda environment: ${ENV_NAME} ..."
-        mamba env remove -y -n "${ENV_NAME}"
+        mamba env remove -y -n "${ENV_NAME}"  &>> /dev/null
         check_exit_status $? "Removing ${ENV_NAME} failed."
 
     fi
@@ -46,7 +53,7 @@ for ENV_YAML in "${SEDNA_REPOSITORY_DIRECTORY}/install/environments/sedna_"*.yml
 done    
 
 ###############################################################################
-## 4. Remove databases
+## 5. Remove databases
 ###############################################################################
 
 echo "Removing databases ..."
@@ -71,7 +78,7 @@ if [[ -d "${DATABASE_DIR}/deepbgc" ]]; then
 fi    
 
 ###############################################################################
-# 5. Exit installation script
+# 6. Exit installation script
 ###############################################################################
 
 echo -e "Uninstallation completed successfully."
