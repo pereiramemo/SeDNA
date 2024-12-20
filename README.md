@@ -22,7 +22,6 @@ conda --version
 mamba --version
 ```
 
-
 If Conda is not installed, follow the instructions [here](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).  
 If Mamba is not installed, you can install it using Conda:
 ```
