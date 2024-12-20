@@ -169,7 +169,7 @@ This is what we should see:
 ```
 annot_metadata.tsv gbks
 ```
-`annot_metadata.tsv` is a TSV table containing the metadata of the BGCs that compose the de-replicated catalog, and it includes the following fields: `acc` `bgc_class` `start` `end` `length` `on_edge` `contig_id` `contig_length` `file` `sample_name` `tool` `bgc_id` `link`
+`annot_metadata.tsv` is a TSV table containing the metadata of the BGCs that compose the de-replicated catalog, and it includes the following fields: `acc` `bgc_class` `start` `end` `length` `on_edge` `contig_id` `contig_length` `file` `sample_name` `tool` `bgc_id` `link`.  
 `gbks` is a folder containing the BGC sequences of the de-replicated catalog in GenBank format.
 
 Once we obtain the de-replicated catalog, we will cluster the BGC sequences predicted in the three samples.
