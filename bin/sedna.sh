@@ -22,7 +22,7 @@ AVAILABLE_MODULES=(
 )
 
 usage() {
-    echo "Usage: $0 [-m <module>] [-o <options>] [-v|--version] [-h|--help]"
+    echo "usage: $0 [-m <module>] [-o <options>] [-v|--version] [-h|--help]"
     echo " "
     echo "Options:"
     echo "  -m, --module    Specify the module. Available modules: ${AVAILABLE_MODULES[*]}"
