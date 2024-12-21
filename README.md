@@ -64,12 +64,9 @@ After installing SeDNA, you first need to activate the main environment.
 ```
 conda activate sedna_main_env
 ```
-Now, you should be able to run the SeDNA wrapping script:
+Now, you should be able to run the SeDNA wrapping script. Let's see how the help instructions look like:
 ```
 sedna.sh --help
-```
-We get the following help instructions:
-```
 Usage: sedna.sh [-m <module>] [-o <options>] [-v|--version] [-h|--help]
  
 Options:
@@ -86,10 +83,7 @@ sedna.sh --module <module_name> --params "--help"
 For example, 
 ```
 sedna.sh --module run_antismash --params "--help"
-```
-And we get the help instructions:
-```
-usage: run_antismash.py [-h] --input_sample INPUT_SAMPLE [--threads THREADS] [--sample_name SAMPLE_NAME] [--output_dir OUTPUT_DIR] [--overwrite] [--taxon TAXON]
+Usage: run_antismash.py [-h] --input_sample INPUT_SAMPLE [--threads THREADS] [--sample_name SAMPLE_NAME] [--output_dir OUTPUT_DIR] [--overwrite] [--taxon TAXON]
                         [--genefinding_tool GENEFINDING_TOOL] [--minlength MINLENGTH]
 
 Annotates BGC sequences utilizing the antiSMASH tool.
