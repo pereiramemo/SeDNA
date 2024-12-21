@@ -226,4 +226,4 @@ else:
 ## 11. Print output message 
 ###############################################################################
 
-print("run_gecco.py executed successfully")
+print("run_gecco module executed successfully")

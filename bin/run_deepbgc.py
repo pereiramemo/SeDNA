@@ -257,4 +257,4 @@ if deepbgc_annot_metadata is not None:
 ## 14. Print output message
 ###############################################################################
     
-print("run_deepbgc.py executed successfully")
+print("run_deepbgc module executed successfully")

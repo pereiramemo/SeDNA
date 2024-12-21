@@ -170,4 +170,4 @@ if resolve_doms == True:
             print("Error message:\n", result_cath_resolve_hits.stderr)
             sys.exit()
 
-print("annot_cds executed successfully")
+print("annot_cds module executed successfully")

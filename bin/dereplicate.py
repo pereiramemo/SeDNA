@@ -289,4 +289,4 @@ outputs.create_df(input_dict = partially_overlapped_bgcs,
                   output_dir = output_dir_partially_overlapped,
                   output_dir_gbks = output_dir_partially_overlapped_gbks)
 
-print("dereplicate executed successfully")
+print("dereplicate module executed successfully")

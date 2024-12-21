@@ -231,4 +231,4 @@ else:
 ## 11. Print output message
 ###############################################################################
 
-print("run_antismash.py executed successfully")
+print("run_antismash module executed successfully")

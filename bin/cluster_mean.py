@@ -165,4 +165,4 @@ output_df = pd.concat([output_df, output_unannot_df], ignore_index=True)
 
 output_df.to_csv(output_tsv, sep='\t', index=False)
 
-print("Clustering executed successfully")
+print("cluster module executed successfully")
