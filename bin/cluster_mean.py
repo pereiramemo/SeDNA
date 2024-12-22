@@ -155,7 +155,7 @@ cluster_ids_unannot = list(range(cluster_id_max +1,
                                  cluster_id_max + len(bgcs_ids_unannot) +1))
 
 output_unannot_df = pd.DataFrame({'bgc_id': bgcs_ids_unannot, 
-                                  'cluster_id': cluster_ids_unannot})
+                                  'cluster_id': str(cluster_ids_unannot)})
 
 output_df = pd.concat([output_df, output_unannot_df], ignore_index=True)
 
