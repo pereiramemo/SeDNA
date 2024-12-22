@@ -185,7 +185,7 @@ Finally, based on the domain annotations, we will cluster the BGC sequences usin
 ```
 sedna.sh --module cluster_sif \
     --params "--input_dir  ${OUTPUT_DIR} \
-              --threshold 3 \
+              --threshold 0.5 \
               --bgc_embeddings_tsv ${OUTPUT_DIR}/bgc_embeddings.tsv \
               --output_tsv ${OUTPUT_DIR}/clust.tsv"
               
