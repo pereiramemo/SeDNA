@@ -68,6 +68,5 @@ ADD SeDNA.tar /bioinfo/software/
 # Install SeDNA
 ################################################################################
 
-RUN cd /bioinfo/software/SeDNA; \
-./install/install.sh; \
-./install/get_databases.sh
+RUN /bioinfo/software/SeDNA/install/install.sh
+RUN /bioinfo/software/SeDNA/install/get_databases.sh
