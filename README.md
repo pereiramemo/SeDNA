@@ -36,7 +36,7 @@ conda clean --all -y
 conda update -y -n base -c defaults conda
 ```
 
-### Installation Steps
+### Installation
 
 1. Clone the repository:  
 ```
@@ -195,7 +195,7 @@ The file `${OUTPUT_DIR}/bgc_embeddings.tsv` contains the embedding of each BGC, 
 
 The file `${OUTPUT_DIR}/clust.tsv` contains the actual clustering as a two-column TSV table, with the BGC ID and the Gene Cluster Family (GCF) ID in the first and second columns, respectively.
 
-### Uninstallation
+# How to uninstall
 
 To uninstall, deactivate the environment `sedna_main_env` and run the script `uninstall.sh` located in the `install` directory. This will remove all Conda environments and databases downloaded for running SeDNA
 
