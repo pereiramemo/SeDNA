@@ -108,7 +108,7 @@ options:
 ```
 SeDNA is composed of different modules that must be run sequentially in a specific order.
 
-First, we need to annotate the BGC sequences in the assembled metagenomic sequences or Metagenome-Assembled Genomes (MAGs), provided as FASTA files. In this example, we will analyze three toy MAGs from the  [OceanDNA catalog](https://www.nature.com/articles/s41597-022-01392-5), artificially subsampled to include only a few BGCs, which can be found in the tests/data folder within the repository.
+First, we need to annotate the BGC sequences in the assembled metagenomic sequences or Metagenome-Assembled Genomes (MAGs), provided as FASTA files. In this example, we will analyze three toy MAGs from the  [OceanDNA catalog](https://www.nature.com/articles/s41597-022-01392-5), artificially subsampled to include only a few BGCs, which can be found in the `tests/data` folder within the repository.
 
 The current version of SeDNA integrates three BGC annotation tools: [antiSMASH](https://github.com/antismash/antismash), [deepBGC](https://github.com/Merck/deepbgc), and [GECCO](https://github.com/zellerlab/GECCO). These tools can be run individually using the `run_<tool>` modules or all at once using the `run_all` option.
 
