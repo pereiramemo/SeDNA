@@ -76,7 +76,7 @@ Options:
   -h, --help      Display this help message
 ```
 
-To get the help of an specific module, we can run the following command:
+To get help with a specific module, we can run the following command:
 ```
 sedna.sh --module <module_name> --params "--help"
 ```
