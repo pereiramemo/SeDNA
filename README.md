@@ -131,9 +131,9 @@ Now, we iterate over the input samples and annotate the BGC sequences using the 
 for s in ${SAMPLES}; do
 
     SAMPLE_NAME=$(basename "${s}" .fasta)
-        echo "${SAMPLE_NAME}"
-        sedna.sh --module run_all \
-            --params "--input_sample ${s} \
+    echo "${SAMPLE_NAME}"
+    sedna.sh --module run_all \
+             --params "--input_sample ${s} \
                       --sample_name ${SAMPLE_NAME} \
                       --output_dir ${OUTPUT_DIR}";
 
@@ -148,12 +148,11 @@ for s in ${SAMPLES}; do
     SAMPLE_NAME=$(basename "${s}" .fasta)
     echo "${SAMPLE_NAME}"
     sedna.sh --module dereplicate \
-    --params "--input_dir ${OUTPUT_DIR}/${SAMPLE_NAME}/bgc_annot/inter"
+             --params "--input_dir ${OUTPUT_DIR}/${SAMPLE_NAME}/bgc_annot/inter"
            
 done                     
 ```
-
-This script will generate a `sorted` folder within each output directory, where we can find the dereplicated catalog.
+This script will generate a folder named `sorted` within each output directory, where the de-replicated catalog can be found.  
 Let’s take a look at one of these:
 
 ```
@@ -163,7 +162,7 @@ This is what we should see:
 ```
 annot_metadata.tsv gbks
 ```
-`annot_metadata.tsv` is a TSV table containing the metadata of the BGCs that compose the de-replicated catalog, and it includes the following fields: `acc` `bgc_class` `start` `end` `length` `on_edge` `contig_id` `contig_length` `file` `sample_name` `tool` `bgc_id` `link`.  
+`annot_metadata.tsv` is a TSV table containing the metadata of the BGCs that compose the de-replicated catalog, and it includes the following fields: `acc`, `bgc_class`, `start`, `end`, `length`, `on_edge`, `contig_id`, `contig_length`, `file`, `sample_name`, `tool`, `bgc_id`, `link`.  
 `gbks` is a folder containing the BGC sequences of the de-replicated catalog in GenBank format.
 
 Once we obtain the de-replicated catalog, we will cluster the BGC sequences predicted in the three samples.
@@ -172,23 +171,23 @@ To do this, we must annotate the Pfam domains using the `cds_annot` module:
 ```
 for s in ${SAMPLES}; do
 
-      SAMPLE_NAME=$(basename "${s}" .fasta)
-      echo "${SAMPLE_NAME}"
-           sedna.sh --module annot_cds \
-           --params "--input_dir ${OUTPUT_DIR}/${SAMPLE_NAME}/bgc_annot/sorted/dereplicated"
+    SAMPLE_NAME=$(basename "${s}" .fasta)
+    echo "${SAMPLE_NAME}"
+    sedna.sh --module annot_cds \
+             --params "--input_dir ${OUTPUT_DIR}/${SAMPLE_NAME}/bgc_annot/sorted/dereplicated"
+             
 done 
 
 ```
-
-Finally, based on the domain annotations, we will cluster the BGC sequences using the cluster_sif module, which implements the [Balanced Iterative Reducing and Clustering using Hierarchies (BIRCH)](https://en.wikipedia.org/wiki/BIRCH) and utilizes the [Smooth Inverse Function (SIF)](https://openreview.net/pdf?id=SyK00v5xx) to construct the BGC embeddings.
+Finally, based on the domain annotations, we will cluster the BGC sequences using the cluster_sif module, which implements the Balanced Iterative Reducing and Clustering using Hierarchies (BIRCH)](https://en.wikipedia.org/wiki/BIRCH) algorithm and utilizes the [Smooth Inverse Function (SIF)](https://openreview.net/pdf?id=SyK00v5xx) to construct the BGC embeddings.
 
 ```
 sedna.sh --module cluster_sif \
-    --params "--input_dir  ${OUTPUT_DIR} \
-              --threshold 0.5 \
-              --bgc_embeddings_tsv ${OUTPUT_DIR}/bgc_embeddings.tsv \
-              --output_tsv ${OUTPUT_DIR}/clust.tsv"
-              
+         --params "--input_dir  ${OUTPUT_DIR} \
+                   --threshold 0.5 \
+                   --bgc_embeddings_tsv ${OUTPUT_DIR}/bgc_embeddings.tsv \
+                   --output_tsv ${OUTPUT_DIR}/clust.tsv"
+
 ```              
 
 The file `${OUTPUT_DIR}/bgc_embeddings.tsv` contains the embedding of each BGC, which can be useful for downstream analysis, such as novelty or diversity assessment.
@@ -197,7 +196,7 @@ The file `${OUTPUT_DIR}/clust.tsv` contains the actual clustering as a two-colum
 
 # How to uninstall
 
-To uninstall, deactivate the environment `sedna_main_env` and run the script `uninstall.sh` located in the `install` directory. This will remove all Conda environments and databases downloaded for running SeDNA
+To uninstall, deactivate the environment `sedna_main_env` and run the script `uninstall.sh` located in the `install` directory. This will remove all Conda environments and databases downloaded for running SeDNA.
 
 ```
 conda deactivate
