@@ -135,7 +135,7 @@ for s in ${SAMPLES}; do
     sedna.sh --module run_all \
              --params "--input_sample ${s} \
                       --sample_name ${SAMPLE_NAME} \
-                      --output_dir ${OUTPUT_DIR}";
+                      --output_dir ${OUTPUT_DIR}"
 
 done
 ```
