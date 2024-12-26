@@ -179,7 +179,7 @@ for s in ${SAMPLES}; do
 done 
 
 ```
-Finally, based on the domain annotations, we will cluster the BGC sequences using the cluster_sif module, which implements the Balanced Iterative Reducing and Clustering using Hierarchies (BIRCH)](https://en.wikipedia.org/wiki/BIRCH) algorithm and utilizes the [Smooth Inverse Function (SIF)](https://openreview.net/pdf?id=SyK00v5xx) to construct the BGC embeddings.
+Finally, based on the domain annotations, we will cluster the BGC sequences using the cluster_sif module, which implements the Balanced Iterative Reducing and Clustering using Hierarchies [(BIRCH)](https://en.wikipedia.org/wiki/BIRCH) algorithm and utilizes the [Smooth Inverse Function (SIF)](https://openreview.net/pdf?id=SyK00v5xx) to construct the BGC embeddings.
 
 ```
 sedna.sh --module cluster_sif \
