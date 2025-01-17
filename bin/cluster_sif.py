@@ -57,7 +57,7 @@ overwrite = args.overwrite
 if os.path.exists(output_tsv) is True:
     
     if args.overwrite is False:
-        print(f'Output dir {output_tsv} already exists. Use --overwrite to overwrite')
+        print(f'Output file {output_tsv} already exists. Use --overwrite to overwrite')
         sys.exit(0)
     
     if args.overwrite is True:
@@ -104,7 +104,6 @@ def map_domain2embeddings(domains, domain_embeddings, weights):
     Returns:
         dict: A dictionary containing the weighted sentence embedding and a list of weighted domain embeddings.
     """
-    
     vector_size = len(next(iter(domain_embeddings.values())))
     embedding_mean = np.zeros(vector_size)
     total_weight = 0
@@ -117,8 +116,12 @@ def map_domain2embeddings(domains, domain_embeddings, weights):
             
             embedding_mean += embedding_weighted    
             
-    embedding_norm = np.linalg.norm(embedding_mean)         
-    embedding_mean = embedding_mean / embedding_norm 
+    embedding_norm = np.linalg.norm(embedding_mean)
+    
+    if embedding_norm == 0:
+        embedding_mean = np.full(vector_size, np.nan)
+    else:    
+        embedding_mean = embedding_mean / embedding_norm 
         
     return(embedding_mean)
 
@@ -151,7 +154,7 @@ for root, dirs, files in os.walk(input_dir):
             if os.stat(os.path.join(root, file)).st_size > 0:
                 matching_files.append(os.path.join(root, file))
 
-# Initialize dictionary of lists, echa list containing BGC domains.
+# Initialize dictionary of lists, each list containing BGC domains.
 bgc_domains = {}
 # Load BGCs
 for file in matching_files:
@@ -238,9 +241,10 @@ output_df = pd.DataFrame({
 cluster_id_max = output_df['cluster_id'].max()
 cluster_ids_unannot = list(range(cluster_id_max +1, 
                                  cluster_id_max + len(bgcs_ids_unannot) +1))
+cluster_ids_unannot_str = [str(element) for element in cluster_ids_unannot]
 
 output_unannot_df = pd.DataFrame({'bgc_id': bgcs_ids_unannot, 
-                                  'cluster_id': str(cluster_ids_unannot)})
+                                  'cluster_id': cluster_ids_unannot_str})
 
 output_df = pd.concat([output_df, output_unannot_df], ignore_index=True)
 

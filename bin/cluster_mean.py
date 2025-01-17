@@ -29,6 +29,7 @@ parser.add_argument("--input_dir", help="Input directory containing the .*_annot
 parser.add_argument("--sample_name", default = "sample", help="Sample name.")
 parser.add_argument("--threshold", default = 1, help="BIRCH clustering threshold")
 parser.add_argument("--embeddings_file", default = f"{home_directory}/.local/share/sedna/embeddings/dom_embeddings_mtx_mibig_pfam.pkl", help="Domain embeddings pkl file.")
+parser.add_argument("--bgc_embeddings_tsv", default = None, help="BGC embeddings output table (tsv)")
 parser.add_argument("--output_tsv", default = "bgc_clust_output.tsv", help="Output clustering table (tsv).")
 parser.add_argument("--overwrite", action="store_true", help="Overwrite output directory.")
 
@@ -38,6 +39,7 @@ input_dir = args.input_dir
 sample_name = args.sample_name
 threshold = float(args.threshold)
 embeddings_file = args.embeddings_file
+bgc_embeddings_tsv = args.bgc_embeddings_tsv
 output_tsv = args.output_tsv
 overwrite = args.overwrite
 
@@ -113,6 +115,9 @@ for bgc in bgc_embeddings:
 
 df_bgc_embeddings_mean = pd.DataFrame(bgc_embeddings_mean).T
 
+if bgc_embeddings_tsv is not None:
+    df_bgc_embeddings_mean.to_csv(bgc_embeddings_tsv, sep='\t', index=True)
+
 ###############################################################################
 # 8. Identify and remove rows with all NaNs
 ###############################################################################
@@ -153,9 +158,10 @@ output_df = pd.DataFrame({
 cluster_id_max = output_df['cluster_id'].max()
 cluster_ids_unannot = list(range(cluster_id_max +1, 
                                  cluster_id_max + len(bgcs_ids_unannot) +1))
+cluster_ids_unannot_str = [str(element) for element in cluster_ids_unannot]
 
 output_unannot_df = pd.DataFrame({'bgc_id': bgcs_ids_unannot, 
-                                  'cluster_id': str(cluster_ids_unannot)})
+                                  'cluster_id': cluster_ids_unannot_str})
 
 output_df = pd.concat([output_df, output_unannot_df], ignore_index=True)
 

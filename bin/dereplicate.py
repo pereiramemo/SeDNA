@@ -14,7 +14,7 @@ import sys
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(f'{current_dir}/src')
-from bgc_derep import dsc, dnsc, outputs 
+from bgc_derep import dsc, dnsc, sst, outputs 
 
 ################################################################################
 # 2. Parse parameters
@@ -23,7 +23,7 @@ from bgc_derep import dsc, dnsc, outputs
 parser = argparse.ArgumentParser(prog='dereplicate_bgcs.py', 
                                  description='Dereplicate BGCs annotated with different tools.')
 parser.add_argument("--input_dir", default = None, help = "The input directory having the metadata tables (tsv) generated with the run_* modules.")
-parser.add_argument("--overlap_thres", default = "0.75", 
+parser.add_argument("--overlap_thres", default = 0.75, 
                     help="Percentage of overlap (in relation to longest BGCs) to determine if two BGCs are overlapped or partially overlapped.")
 parser.add_argument("--metadata", default = None, help="A comma-separated list of TSV tables containing the metadata of annotated BGCs. This parameter is ignored if --input_dir is used.")
 parser.add_argument("--overwrite", action="store_true", help="Overwrite output directory.")
@@ -31,7 +31,7 @@ parser.add_argument("--output_dir", help = "The output directory where non-overl
 
 args = parser.parse_args()
 input_dir = args.input_dir
-overlap_thres = args.overlap_thres
+overlap_thres = float(args.overlap_thres)
 metadata = args.metadata
 overwrite = args.overwrite
 output_dir = args.output_dir
@@ -88,7 +88,12 @@ if input_dir is not None:
     
 else:
     metadata_list = [i.strip() for i in metadata.split(',')]
-        
+
+# Exit if there is no metadata file
+if len(metadata_list) == 0:
+    print(f'No annot_metadata.tsv files found')
+    sys.exit(1)
+    
 metadata_dict = dict()
 for i in range(0, len(metadata_list)):
     file = metadata_list[i]
@@ -140,7 +145,8 @@ def recursive_dereplication(metadata: list =  None,
                                                                dereplicated_bgcs = dereplicated_bgcs,
                                                                overlapped_bgcs = overlapped_bgcs,
                                                                partially_overlapped_bgcs = partially_overlapped_bgcs,
-                                                               non_overlapped_bgcs = non_overlapped_bgcs)
+                                                               non_overlapped_bgcs = non_overlapped_bgcs,
+                                                               overlap_thres = overlap_thres)
 
         dereplicated_bgcs = output_shared_contigs['dereplicated_bgcs']
         overlapped_bgcs = output_shared_contigs['overlapped_bgcs']
@@ -166,35 +172,46 @@ def recursive_dereplication(metadata: list =  None,
                                                       df = True)
 
         metadata[0] = metadata_dereplicated_bgc
-        
+
         if len(metadata) == 1:
-            
+
             output_dict = {'dereplicated_bgcs': dereplicated_bgcs, 
                            'overlapped_bgcs': overlapped_bgcs, 
                            'partially_overlapped_bgcs': partially_overlapped_bgcs, 
                            'non_overlapped_bgcs': non_overlapped_bgcs}
 
         else:
-            
-                        
+
             output_dict = recursive_dereplication(metadata = metadata, 
                                     dereplicated_bgcs = dereplicated_bgcs,
                                     overlapped_bgcs = overlapped_bgcs,
                                     partially_overlapped_bgcs = partially_overlapped_bgcs,
                                     non_overlapped_bgcs = non_overlapped_bgcs)
-                 
+
         return(output_dict)
 
 ###############################################################################
 ## 7. Execute dereplication
 ###############################################################################
 
-output = recursive_dereplication(metadata = metadata_list, 
-                                dereplicated_bgcs = dereplicated_bgcs,
-                                overlapped_bgcs = overlapped_bgcs,
-                                partially_overlapped_bgcs = partially_overlapped_bgcs,
-                                non_overlapped_bgcs = non_overlapped_bgcs)
+if len(metadata_list) > 1:
 
+    output = recursive_dereplication(metadata = metadata_list, 
+                                    dereplicated_bgcs = dereplicated_bgcs,
+                                    overlapped_bgcs = overlapped_bgcs,
+                                    partially_overlapped_bgcs = partially_overlapped_bgcs,
+                                    non_overlapped_bgcs = non_overlapped_bgcs)
+
+if len(metadata_list) == 1:
+    
+    output_sorted_single_table = sst.sort_single_table(metadata_df1 = metadata_list[0],
+                                                       dereplicated_bgcs = dereplicated_bgcs,
+                                                       non_overlapped_bgcs = non_overlapped_bgcs)
+    
+    output = {'dereplicated_bgcs': dereplicated_bgcs, 
+              'overlapped_bgcs': overlapped_bgcs, 
+              'partially_overlapped_bgcs': partially_overlapped_bgcs, 
+              'non_overlapped_bgcs': non_overlapped_bgcs}
 
 dereplicated_bgcs = output['dereplicated_bgcs']
 overlapped_bgcs = output['overlapped_bgcs']
@@ -232,7 +249,7 @@ output_dir_non_overlapped = f'{output_dir}/non_overlapped'
 output_dir_non_overlapped_gbks = f'{output_dir}/non_overlapped/gbks'
 
 if not os.path.exists(output_dir_non_overlapped):
-    try:       
+    try:
         os.makedirs(output_dir_non_overlapped_gbks)
     except Exception as e:
         print(f'Error: {e}')
