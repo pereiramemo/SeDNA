@@ -7,7 +7,8 @@ def dereplicate_shared_contigs(metadata_df1: str = None,
                                dereplicated_bgcs: str = None,
                                overlapped_bgcs: str = None,
                                partially_overlapped_bgcs: str = None,
-                               non_overlapped_bgcs: str = None):
+                               non_overlapped_bgcs: str = None,
+                               overlap_thres: float = None):
     
     for tool in dereplicated_bgcs:
         dereplicated_bgcs[tool] = dict()
