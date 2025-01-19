@@ -45,37 +45,6 @@ if metadata is None and os.path.exists(input_dir) is False:
     sys.exit(1)
 
 ################################################################################
-# 4. Create or remove output directory
-################################################################################
-
-if output_dir is None:
-    output_dir = os.path.join(os.path.dirname(os.path.abspath(input_dir)), "sorted")
-
-if os.path.exists(output_dir) is True:
-    
-    if args.overwrite is False:
-        print(f'Output dir {output_dir} already exists. Use --overwrite to overwrite')
-        sys.exit(0)
-    
-    if args.overwrite is True:
-        try:
-            shutil.rmtree(output_dir)
-        except OSError as e:
-            print(f'Error: {e}')
-        try:       
-            os.makedirs(output_dir)
-        except Exception as e:
-            print(f'Error: {e}')
-            sys.exit(1)
-        
-if os.path.exists(output_dir) is False:
-    try:       
-        os.makedirs(output_dir)
-    except Exception as e:
-        print(f'Error: {e}')
-        sys.exit(1)
-        
-################################################################################
 # 4. Load the metadata tables and check if exist
 ################################################################################
 
@@ -85,7 +54,6 @@ if input_dir is not None:
         for file in files:
             if re.search("annot_metadata.tsv", file):
                 metadata_list.append(os.path.join(root, file))
-    
 else:
     metadata_list = [i.strip() for i in metadata.split(',')]
 
@@ -105,9 +73,40 @@ for i in range(0, len(metadata_list)):
         tool = metadata_df['tool'].iloc[0]
         metadata_dict[tool] = metadata_df
         metadata_list[i] = metadata_df
-    
+
 ################################################################################
-# 5. Initialize dictionaries
+# 5. Create or remove output directory
+################################################################################
+
+if output_dir is None:
+    output_dir = os.path.join(os.path.dirname(os.path.abspath(input_dir)), "sorted")
+
+if os.path.exists(output_dir) is True:
+
+    if args.overwrite is False:
+        print(f'Output dir {output_dir} already exists. Use --overwrite to overwrite')
+        sys.exit(0)
+
+    if args.overwrite is True:
+        try:
+            shutil.rmtree(output_dir)
+        except OSError as e:
+            print(f'Error: {e}')
+        try:       
+            os.makedirs(output_dir)
+        except Exception as e:
+            print(f'Error: {e}')
+            sys.exit(1)
+        
+if os.path.exists(output_dir) is False:
+    try:       
+        os.makedirs(output_dir)
+    except Exception as e:
+        print(f'Error: {e}')
+        sys.exit(1)
+        
+################################################################################
+# 6. Initialize dictionaries
 ################################################################################
 
 dereplicated_bgcs = dict()
@@ -122,7 +121,7 @@ for tool in metadata_dict:
     overlapped_bgcs[tool] = dict()
 
 ###############################################################################
-## 6. Define recursive function
+## 7. Define recursive function
 ###############################################################################
 
 def recursive_dereplication(metadata: list =  None,
@@ -191,7 +190,7 @@ def recursive_dereplication(metadata: list =  None,
         return(output_dict)
 
 ###############################################################################
-## 7. Execute dereplication
+## 8. Execute dereplication
 ###############################################################################
 
 if len(metadata_list) > 1:
@@ -219,7 +218,7 @@ partially_overlapped_bgcs = output['partially_overlapped_bgcs']
 non_overlapped_bgcs = output['non_overlapped_bgcs']
 
 ###############################################################################
-## 8. Create output dirs
+## 9. Create output dirs
 ###############################################################################
 
 # overlapped dir
@@ -267,7 +266,7 @@ if not os.path.exists(output_dir_dereplicated):
         sys.exit(1)
 
 ###############################################################################
-## 9. Sort data: create links
+## 10. Sort data: create links
 ###############################################################################
 
 # overlapped
@@ -287,7 +286,7 @@ outputs.create_links(input_dict = dereplicated_bgcs,
                      output_dir = output_dir_dereplicated_gbks)
 
 ###############################################################################
-## 10. Create DFs
+## 11. Create DFs
 ###############################################################################
 
 outputs.create_df(input_dict = dereplicated_bgcs,
