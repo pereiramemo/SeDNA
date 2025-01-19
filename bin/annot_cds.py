@@ -53,18 +53,26 @@ cut_ga = args.cut_ga
 output_dir = args.output_dir
 
 ################################################################################
-# 3. Create output dir
+# 3. Check input dir
+################################################################################
+
+if not os.path.exists(input_dir):
+    print(f'Input dir does not exist')
+    sys.exit(0)
+
+################################################################################
+# 4. Create output dir
 ################################################################################
 
 if output_dir is None:
     output_dir = os.path.join(input_dir, "cds_annot")
 
 if os.path.exists(output_dir) is True:
-    
+
     if args.overwrite is False:
         print(f'Output dir {output_dir} already exists. Use --overwrite to overwrite')
         sys.exit(0)
-    
+
     if args.overwrite is True:
         try:
             shutil.rmtree(output_dir)
@@ -82,15 +90,7 @@ if os.path.exists(output_dir) is False:
     except Exception as e:
         print(f'Error: {e}')
         sys.exit(1)
-
-################################################################################
-# 4. Check input dir
-################################################################################
-
-if not os.path.exists(input_dir):
-    print(f'Input dir {input_dir} does not exist')
-    sys.exit(1)
-
+    
 ################################################################################
 # 5. Create fasta files
 ################################################################################
@@ -103,6 +103,7 @@ if create_fasta == True:
 
     if len(paths2gbk) == 0:
         print("No gbk file found")
+        shutil.rmtree(output_dir)
         sys.exit()
 
     path2names = []
@@ -115,7 +116,7 @@ if create_fasta == True:
         utilities.extract_cds(input_gbk = gbk, 
                               cds_id = cds_id, 
                               output_fasta = fasta)
-
+        
 ################################################################################
 # 6. HMM annotation
 ################################################################################
@@ -142,7 +143,7 @@ if annotate == True:
                         for hits in pyhmmer.hmmer.hmmsearch(hmms, seqs, domE = evalue_thres, 
                                                             bit_cutoffs="gathering", cpus = threads):
                             hits.write(output_file, format = "domains", header = False)
-                                            
+
 ################################################################################
 # 7. Resolve domain structure
 ################################################################################
