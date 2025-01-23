@@ -413,7 +413,7 @@ def deepbgc_annot_parser(input_dir: str = None, sample_name: str = None,
                 contig_id = pattern1.sub('', acc)
                                 
                 # start and end coords, and length
-                coords= = get_feature_location(record, "cluster")  # these coords are zero based
+                coords = get_feature_location(record, "cluster")  # these coords are zero based
                 start = int(coords[-2])
                 end = int(coords[-1])
                 length = end - start # 1 is not added given that coords are zero based
