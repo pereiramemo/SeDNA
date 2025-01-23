@@ -193,8 +193,8 @@ def gbk_splitter(input_file : str = None, output_dir : str = None,
         acc = gbk.annotations['accessions'][0]
         # contig_id
         pattern1 = re.compile('_[0-9]+-[0-9]+$')
-        pattern2 = re.compile('\.[0-9]$')
-        if re.search(pattern2, acc):
+        pattern2 = re.compile('\.[0-9]$')  
+        if re.search(pattern2, acc): # This is done to remove potential numbers after the coordinates. DeepBGC is inconsistent with this format.
             acc = pattern2.sub('', acc)
         contig_id = pattern1.sub('', acc)
         # create dict
@@ -327,7 +327,7 @@ def antismash_annot_parser(input_dir: str = None, sample_name: str = None,
                 # bgc class
                 bgc_class = get_features(record,"cand_cluster", "product")
                 # start and end coordinates and length
-                location = get_feature_location(record,"cand_cluster")
+                location = get_feature_location(record,"cand_cluster") # these coords are zero based
                 start = int(location[0])
                 end = int(location[1])
                 length = end - start # 1 is not added given that coords are zero based
@@ -401,22 +401,27 @@ def deepbgc_annot_parser(input_dir: str = None, sample_name: str = None,
         for input_gbk in paths2gbk:
             with open(input_gbk, "r") as gbk_handle:
                 record = SeqIO.read(gbk_handle, "genbank")
+                
                 # acc
                 acc = record.annotations['accessions'][0]
+                
                 # contig_id
                 pattern1 = re.compile('_[0-9]+-[0-9]+$')
-                pattern2 = re.compile('\.[0-9]$')
-                if re.search(pattern2, acc):
+                pattern2 = re.compile('\.[0-9]$') 
+                if re.search(pattern2, acc): # This is done to remove potential numbers after the coordinates. DeepBGC is inconsistent with this format. 
                     acc = pattern2.sub('', acc)
                 contig_id = pattern1.sub('', acc)
+                                
                 # start and end coords, and length
-                coords = re.split(r'[-,_]',acc)
+                coords= = get_feature_location(record, "cluster")  # these coords are zero based
                 start = int(coords[-2])
                 end = int(coords[-1])
                 length = end - start # 1 is not added given that coords are zero based
+
                 # add index
                 acc_i = acc + "-" + str(i)
                 i += 1
+                
                 # bgc class
                 bgc_class = get_features(record, "cluster", "product_class_score")
                 bgc_class = bgc_class.replace(" ", "")
@@ -499,7 +504,7 @@ def gecco_annot_parser(input_dir: str = None, sample_name: str = None,
             # contig_id
             contig_id = row['sequence_id']
             # start and end coords, and length
-            start = int(row['start'])
+            start = int(row['start']) -1 # coords are converted to zero based
             end = int(row['end'])
             length = end - start # 1 is not added given that coords are zero based        
             # add index
@@ -637,7 +642,12 @@ def format_gbks(input_dir: str = None, input_tsv: str = None,
             acc = gbk.annotations['accessions'][0]
       
             if tool == "deepbgc":
-                contig_id = re.sub(r'_[0-9]+-[0-9]+$','',acc)
+            
+                pattern1 = re.compile('_[0-9]+-[0-9]+$')
+                pattern2 = re.compile('\.[0-9]$') 
+                if re.search(pattern2, acc): # This is done to remove potential numbers after the coordinates. DeepBGC is inconsistent with this format. 
+                    acc = pattern2.sub('', acc)
+                contig_id = pattern1.sub('', acc)
                 gbk.name = contig_id
 
             if tool == "gecco":
