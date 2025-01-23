@@ -192,8 +192,11 @@ def gbk_splitter(input_file : str = None, output_dir : str = None,
         # acc
         acc = gbk.annotations['accessions'][0]
         # contig_id
-        pattern = re.compile('_[0-9]+-[0-9]+$')
-        contig_id = pattern.sub('', acc)
+        pattern1 = re.compile('_[0-9]+-[0-9]+$')
+        pattern2 = re.compile('\.[0-9]$')
+        if re.search(pattern2, acc):
+            acc = pattern2.sub('', acc)
+        contig_id = pattern1.sub('', acc)
         # create dict
         if contig_id not in bgc_contig_id_counter:
             bgc_contig_id_counter[contig_id] = 1
@@ -401,8 +404,11 @@ def deepbgc_annot_parser(input_dir: str = None, sample_name: str = None,
                 # acc
                 acc = record.annotations['accessions'][0]
                 # contig_id
-                pattern = re.compile('_[0-9]+-[0-9]+$')
-                contig_id = pattern.sub('', acc)
+                pattern1 = re.compile('_[0-9]+-[0-9]+$')
+                pattern2 = re.compile('\.[0-9]$')
+                if re.search(pattern2, acc):
+                    acc = pattern2.sub('', acc)
+                contig_id = pattern1.sub('', acc)
                 # start and end coords, and length
                 coords = re.split(r'[-,_]',acc)
                 start = int(coords[-2])
