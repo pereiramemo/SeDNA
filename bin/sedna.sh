@@ -17,6 +17,7 @@ AVAILABLE_MODULES=(
 "run_all"
 "dereplicate"
 "annot_cds"
+"import_annot_cds"
 "cluster_mean"
 "cluster_sif"
 )
@@ -114,6 +115,10 @@ case "${MODULE}" in
     "annot_cds")
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_annot_cds_env
         annot_cds.py $PARAMS
+        ;;    
+    "import_annot_cds")
+        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_import_annot_cds_env
+        import_annot_cds.py $PARAMS
         ;;    
     "cluster_mean")
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_general_purpose_env

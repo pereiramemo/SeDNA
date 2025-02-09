@@ -176,7 +176,7 @@ if not os.path.exists(input_dir):
 ################################################################################
 
 if output_dir is None:
-    output_dir = os.path.join(input_dir, "cds_annot")
+    output_dir = os.path.join(input_dir, "annot_cds")
 
 if os.path.exists(output_dir) is True:
 
