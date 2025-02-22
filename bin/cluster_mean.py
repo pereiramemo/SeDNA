@@ -77,10 +77,11 @@ for root, dirs, files in os.walk(input_dir):
 # Load BGCs
 bgc_domains = {}
 for file in matching_files:
-    bgc = os.path.basename(file).replace("_annotdoms_resolved.tsv", "")
-    df_tmp = pd.read_csv(file, sep=' ', comment='#', header=None)
-    bgc_domains[bgc] = df_tmp.iloc[:, 1].tolist()
-    
+    if os.path.exists(file) and os.path.getsize(file) > 0:
+        bgc = os.path.basename(file).replace("_annotdoms_resolved.tsv", "")
+        df_tmp = pd.read_csv(file, sep=' ', comment='#', header=None)
+        bgc_domains[bgc] = df_tmp.iloc[:, 1].tolist()
+
 ###############################################################################
 ## 5. Map domains to embeddings 
 ###############################################################################
@@ -88,12 +89,12 @@ for file in matching_files:
 # Map domains to embeddings
 bgc_embeddings = {}
 for bgc in bgc_domains:
-  
+
     # deduplicate elements in list
     bgc_domains[bgc] = list(dict.fromkeys(bgc_domains[bgc]))
     # initialize list of embeddings
     bgc_embeddings[bgc] = []
-    
+
     for domain in bgc_domains[bgc]:
         if domain in dom_embeddings:
             bgc_embeddings[bgc].append(dom_embeddings[domain])
