@@ -18,6 +18,7 @@ AVAILABLE_MODULES=(
 "dereplicate"
 "annot_cds"
 "import_annot_cds"
+"get_bgc_coverage"
 "cluster_mean"
 "cluster_sif"
 )
@@ -120,6 +121,10 @@ case "${MODULE}" in
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_import_annot_cds_env
         import_annot_cds.py $PARAMS
         ;;    
+    "get_bgc_coverage")
+        source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_get_bgc_coverage_env
+        get_bgc_coverage.py $PARAMS
+        ;;
     "cluster_mean")
         source "${CONDA_BASE}/bin/activate" ${CONDA_ENVS_PATH}/sedna_general_purpose_env
         cluster_mean.py $PARAMS
