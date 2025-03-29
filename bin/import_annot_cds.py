@@ -229,9 +229,9 @@ def filter_domtblout_by_cds(domtblout, cds_ids_dict):
     cds_ids_to_extract = {value for sublist in cds_ids_dict.values() for value in sublist}
 
     for bgc_id,cds_ids in cds_ids_dict.items():
-
+        
         domtblout_bgc_filt_name = os.path.join(output_dir, bgc_id)
-        domtblout_bgc_filt = os.path.join(output_dir, f'{domtblout_bgc_filt_name}.domtblout')
+        domtblout_bgc_filt = f'{domtblout_bgc_filt_name}.domtblout'
         path2names.append(domtblout_bgc_filt_name)
 
         try:
