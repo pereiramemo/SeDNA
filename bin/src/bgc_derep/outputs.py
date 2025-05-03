@@ -19,7 +19,7 @@ def create_links(input_dict: str = None,
             start_coord = row_as_dict['start']
             end_coord = row_as_dict['end']
             bgc_id_str_list = [tool_name, sample_name, contig_id, 
-                              start_coord, end_coord]
+                               start_coord, end_coord]
             bgc_id_str_list = [str(s) for s in bgc_id_str_list]
             bgc_id_str = '__'.join(bgc_id_str_list)
             source_dir = input_dict[tool][bgc_id]['file']
@@ -27,7 +27,7 @@ def create_links(input_dict: str = None,
             target_path = f'{output_dir}/{bgc_id_str}.gbk'
 
             if not os.path.exists(source_dir):
-                print("File paths in metadata table do not exist")
+                print(f'File path {source_dir} in metadata table do not exist')
                 sys.exit()
 
             try:
@@ -41,8 +41,6 @@ def create_links(input_dict: str = None,
 ## Function create_dfs
 ###############################################################################
     
-# extract dereplicated annot_metadata DF
-
 def create_df(input_dict: str = None,
               output_dir: str = None,
               output_dir_gbks: str = None,
@@ -69,7 +67,7 @@ def create_df(input_dict: str = None,
             bgc_id_str = '__'.join(bgc_id_str_list)
             input_as_row['bgc_id'] = bgc_id_str
 
-            # Crate the link filed, contaitnig the link of the sequence
+            # Crate the link field, contaitnig the link of the sequence
             output_dir_path = os.path.abspath(output_dir_gbks)                
             link_name = f'{output_dir_path}/{bgc_id_str}.gbk'
             if not os.path.exists(link_name) and df == False:
@@ -80,10 +78,40 @@ def create_df(input_dict: str = None,
             # Extend df 
             output_df = pd.concat([output_df, input_as_row], ignore_index=True)
 
-    # write dereplicated annot_metadata DF
+    # Optionally write dereplicated annot_metadata or output as a DF
     output_tsv = f'{output_dir}/annot_metadata.tsv'
     if df == True:
         return(output_df)
     if tsv == True: 
         if output_df.shape[0] > 0:
             output_df.to_csv(output_tsv, sep='\t', index=False)
+            
+            
+###############################################################################
+## Function map_synonyms
+###############################################################################
+            
+def map_synonyms(synonyms_file: str = None, input_dict: str = None):
+                   
+    synonyms_df = pd.read_csv(synonyms_file, sep="\t")
+
+    for tool in input_dict:
+      
+        # subset synnonyms_df and convert to dict
+        tool_column = f'bgc_class_{tool}'
+        ref_column = 'bgc_class_formatted'
+        synonyms_tool_df = synonyms_df[[tool_column,ref_column]]
+        synonyms_tool_dict = synonyms_tool_df.set_index(tool_column)[ref_column].to_dict()
+      
+        # iterate through all annotations in tool 
+        for index_value in input_dict[tool]:
+          
+            row_as_df = input_dict[tool][index_value]['row']
+            bgc_class_i = row_as_df.loc['bgc_class']
+            row_as_df.loc['bgc_class_formatted'] = synonyms_tool_dict[bgc_class_i]
+            
+            # update row value 
+            input_dict[tool][index_value]['row'] = row_as_df
+            
+    return(input_dict)
+  
