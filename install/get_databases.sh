@@ -100,7 +100,14 @@ cp -r "${SEDNA_REPOSITORY_DIRECTORY}/resources/embeddings"/*.pkl "${DATABASE_DIR
 check_exit_status $? "Copying sedna pkl files failed."
 
 ###############################################################################
-# 6. Download tool specific databases: antismash
+# 6. Copy BGC class synonyms list
+###############################################################################
+
+echo -e "\t*Copying sedna synonyms list to ${DATABASE_DIR}/sedna"
+cp -r "${SEDNA_REPOSITORY_DIRECTORY}/resources/bgc_class_synonyms.tsv" "${DATABASE_DIR}/sedna/bgc_class_synonyms.tsv" &>> "${LOG_FILE}"
+
+###############################################################################
+# 7. Download tool specific databases: antismash
 ###############################################################################
 
 echo -e "\t*Downloading antiSMASH database"
@@ -114,7 +121,7 @@ conda deactivate
 check_exit_status "${EXIT_STATUS}" "Downloading antismash databases failed."
 
 ###############################################################################
-# 7. Download tool specific databases: deepbgc
+# 8. Download tool specific databases: deepbgc
 ###############################################################################
 
 echo -e "\t*Downloading deepBGC database"
@@ -128,7 +135,7 @@ conda deactivate
 check_exit_status "${EXIT_STATUS}" "Downloading deepbgc databases failed."
 
 ###############################################################################
-# 8. Exit get databases script
+# 9. Exit get databases script
 ###############################################################################
 
 echo -e "Getting databases completed successfully."

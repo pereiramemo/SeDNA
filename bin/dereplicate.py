@@ -15,6 +15,7 @@ import sys
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(f'{current_dir}/src')
 from bgc_derep import dsc, dnsc, sst, outputs 
+home_directory = os.getenv('HOME')
 
 ################################################################################
 # 2. Parse parameters
@@ -26,6 +27,7 @@ parser.add_argument("--input_dir", default = None, help = "The input directory h
 parser.add_argument("--overlap_thres", default = 0.75, 
                     help="Percentage of overlap (in relation to longest BGCs) to determine if two BGCs are overlapped or partially overlapped.")
 parser.add_argument("--metadata", default = None, help="A comma-separated list of TSV tables containing the metadata of annotated BGCs. This parameter is ignored if --input_dir is used.")
+parser.add_argument("--synonyms_file", default =  f"{home_directory}/.local/share/sedna/bgc_class_synonyms.tsv", help = "List containing standardized BGC class names across annotation tools.")
 parser.add_argument("--overwrite", action="store_true", help="Overwrite output directory.")
 parser.add_argument("--output_dir", help = "The output directory where non-overlapped, partially overlapped and overlapped BGCs sequences and metadata tables (tsv) are saved.")
 
@@ -33,6 +35,7 @@ args = parser.parse_args()
 input_dir = args.input_dir
 overlap_thres = float(args.overlap_thres)
 metadata = args.metadata
+synonyms_file = args.synonyms_file
 overwrite = args.overwrite
 output_dir = args.output_dir
 
@@ -83,11 +86,11 @@ if output_dir is None:
 
 if os.path.exists(output_dir) is True:
 
-    if args.overwrite is False:
+    if overwrite is False:
         print(f'Output dir {output_dir} already exists. Use --overwrite to overwrite')
         sys.exit(0)
 
-    if args.overwrite is True:
+    if overwrite is True:
         try:
             shutil.rmtree(output_dir)
         except OSError as e:
@@ -274,7 +277,7 @@ outputs.create_links(input_dict = overlapped_bgcs,
                      output_dir = output_dir_overlapped_gbks)
 
 # partially overlapped
-outputs.create_links(input_dict =  partially_overlapped_bgcs, 
+outputs.create_links(input_dict = partially_overlapped_bgcs, 
                      output_dir = output_dir_partially_overlapped_gbks)
 
 # non overlapped
@@ -286,7 +289,14 @@ outputs.create_links(input_dict = dereplicated_bgcs,
                      output_dir = output_dir_dereplicated_gbks)
 
 ###############################################################################
-## 11. Create DFs
+## 11. Map formatted BGC class names
+###############################################################################
+
+dereplicated_bgcs = outputs.map_synonyms(synonyms_file = synonyms_file,
+                                         input_dict = dereplicated_bgcs)
+
+###############################################################################
+## 12. Create DFs
 ###############################################################################
 
 outputs.create_df(input_dict = dereplicated_bgcs,
@@ -304,5 +314,9 @@ outputs.create_df(input_dict = non_overlapped_bgcs,
 outputs.create_df(input_dict = partially_overlapped_bgcs,
                   output_dir = output_dir_partially_overlapped,
                   output_dir_gbks = output_dir_partially_overlapped_gbks)
+
+###############################################################################
+## 13. Exit dereplicate
+###############################################################################
 
 print("dereplicate module executed successfully")
