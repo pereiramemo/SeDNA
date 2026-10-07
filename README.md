@@ -1,6 +1,9 @@
 # SeDNA Bioprospecting Pipeline
 Sedna is a bioinformatic pipeline dedicated to the bioprospecting analysis of Biosynthetic Gene Clusters in metagenomic data (see fig. 1 below).
 
+> [!WARNING]
+> **Beta version.** Sedna is under active development. Features, command-line options, and output formats may change between releases, and some functionality may be incomplete or unstable.
+
 
 test push
 
@@ -206,3 +209,11 @@ conda deactivate
 ./install/uninstall.sh
 ```
 
+
+# License
+
+Sedna is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/) (CC BY-NC-SA 4.0). See the [LICENSE](LICENSE) file for the full text.
+
+Sedna was developed at NewAtlantis Labs, which has since been acquired by Ocean BioMetrics.
+
+For licensing questions, please contact Emiliano Pereira at [pereiramemo@gmail.com](mailto:pereiramemo@gmail.com).
