@@ -210,6 +210,26 @@ conda deactivate
 ```
 
 
+# Citation
+
+If you use Sedna in your research, please cite:
+
+Pereira Flores, E. (2026). *pereiramemo/SeDNA: v1.0.0* (beta). Zenodo. [https://doi.org/10.5281/zenodo.23224099](https://doi.org/10.5281/zenodo.23224099)
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23224099.svg)](https://doi.org/10.5281/zenodo.23224099)
+
+```bibtex
+@software{pereira_flores_2026_sedna,
+  author    = {Pereira Flores, Emiliano},
+  title     = {pereiramemo/SeDNA: v1.0.0},
+  year      = {2026},
+  publisher = {Zenodo},
+  version   = {beta},
+  doi       = {10.5281/zenodo.23224099},
+  url       = {https://doi.org/10.5281/zenodo.23224099}
+}
+```
+
 # License
 
 Sedna is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/) (CC BY-NC-SA 4.0). See the [LICENSE](LICENSE) file for the full text.
