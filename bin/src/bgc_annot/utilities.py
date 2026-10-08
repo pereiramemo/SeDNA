@@ -567,11 +567,6 @@ A particular behavior of the function is that the `file` field is added (with th
 # 11. format_gbks
 ###############################################################################
 
-# Adapted from Satria A. Kautsar
-# Wageningen University & Research
-# Bioinformatics Group
-# Copyright (C) 2020
-
 """generate custom antiSMASH regiongbks"""
 
 import os
