@@ -1,0 +1,22 @@
+name: sedna-module-2
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # deepBGC 0.1.31 needs TensorFlow 1.15, hence Python 3.7
+  - python=3.7
+  - hmmer=3.4
+  - prodigal=2.6.3
+  - pip
+  - pip:
+      - deepbgc==0.1.31
+      - biopython==1.81
+      - h5py==3.8.0
+      - keras==2.2.4
+      - matplotlib==2.2.3
+      - numpy==1.16.1
+      - pandas==0.24.1
+      - protobuf==3.20.3
+      - scikit-learn==0.21.3
+      - scipy==1.2.0
+      - tensorflow==1.15.4

@@ -1,0 +1,17 @@
+FROM mambaorg/micromamba:1.5.10-noble
+
+# Bioconda's antismash package runs `download-antismash-databases` unconditionally in
+# its post-link script, baking ~8 GB of databases into the package dir. MODULE1 passes
+# --databases <db_dir>/antismash (bind-mounted, see bin/download_dbs.py), so they are
+# deleted in the same layer to keep them out of the image.
+COPY --chown=$MAMBA_USER:$MAMBA_USER docker/resources/requirements-module-1.yml /tmp/conda.yml
+RUN micromamba install -y -n base -f /tmp/conda.yml \
+    && micromamba install -y -n base conda-forge::procps-ng \
+    && rm -rf $MAMBA_ROOT_PREFIX/lib/python3*/site-packages/antismash/databases/* \
+    && micromamba env export --name base --explicit > environment.lock \
+    && echo ">> CONDA_LOCK_START" \
+    && cat environment.lock \
+    && echo "<< CONDA_LOCK_END" \
+    && micromamba clean -a -y
+USER root
+ENV PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"

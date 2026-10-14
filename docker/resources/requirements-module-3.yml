@@ -1,0 +1,12 @@
+name: sedna-module-3
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.12
+  - gecco=0.9.10
+  # gecco 0.9.10 calls .decode() on pyhmmer attributes, which are str from pyhmmer 0.11 on
+  - pyhmmer=0.10.14
+  - pyrodigal=3.5.2
+  - biopython=1.84
+  - pandas=2.2.2

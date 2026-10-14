@@ -1,0 +1,7 @@
+name: sedna-module-4
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.12
+  - pandas=2.2.3
