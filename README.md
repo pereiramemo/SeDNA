@@ -4,9 +4,6 @@ Sedna is a bioinformatic pipeline dedicated to the bioprospecting analysis of Bi
 > [!WARNING]
 > **Beta version.** Sedna is under active development. Features, command-line options, and output formats may change between releases, and some functionality may be incomplete or unstable.
 
-
-test push
-
 ![Figure 1: sedna workflow](https://github.com/new-atlantis-labs/Bioprospecting-Internal/blob/main/images/sedna.png)
 
 The tasks performed by Sedna are the following.  
@@ -17,197 +14,113 @@ The tasks performed by Sedna are the following.
 
 # How to install
 
-### Recommended Pre-installation Steps
+SeDNA is a [Nextflow](https://www.nextflow.io/) pipeline. Each module runs in its own container, so the only host requirements are:
 
-1. Ensure Conda and Mamba are installed.
-Check their versions with the following commands:
-```
-conda --version
-```
-```
-mamba --version
-```
+- Nextflow (≥ 24.x),
+- Docker (default `standard` profile), or Apptainer (`slurm` profile),
+- Python 3 (for the two setup scripts in `bin/`).
 
-If Conda is not installed, follow the instructions [here](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).  
-If Mamba is not installed, you can install it using Conda:
-```
-conda install conda-forge::mamba
-```
-
-2. Clean and update Conda:
-```
-conda clean --all -y 
-```
-```
-conda update -y -n base -c defaults conda
-```
-
-### Installation
-
-1. Clone the repository:  
+1. Clone the repository:
 ```
 git clone https://github.com/new-atlantis-labs/SeDNA.git
-```
-
-2. Navigate to the repository: 
-```
 cd SeDNA
 ```
 
-3. Run the installation script located in the `install` directory:
+2. Build the six module images. This must be run from the repository root:
 ```
-./install/install.sh
+bash docker/dockerbuild_commands.sh
+```
+On a cluster with Apptainer, cache the images on the login node instead, once they are available in the registry:
+```
+bin/download_imgs.py
 ```
 
-4. Download required databases using the provided script: 
+3. Download the databases (Pfam-A, antiSMASH, deepBGC) into `~/.sedna/db`:
 ```
-./install/get_databases.sh
+bin/download_dbs.py
 ```
+If the databases were already fetched by the old `install/get_databases.sh`, you can reuse them with `--db_dir ~/.local/share` instead.
 
 # Getting started
 
-After installing SeDNA, you first need to activate the main environment.
+Print the full list of parameters:
 ```
-conda activate sedna_main_env
-```
-Now, you should be able to run the SeDNA wrapping script. Let's see how the help instructions look like:
-```
-sedna.sh --help
-Usage: sedna.sh [-m <module>] [-o <options>] [-v|--version] [-h|--help]
- 
-Options:
-  -m, --module    Specify the module. Available modules: run_antismash run_deepbgc run_gecco run_all dereplicate annot_cds cluster_mean cluster_sif
-  -p, --params    Specify parameters to give to each module
-  -v, --version   Display the version information
-  -h, --help      Display this help message
+nextflow run sedna.nf --help
 ```
 
-To get help with a specific module, we can run the following command:
-```
-sedna.sh --module <module_name> --params "--help"
-```
-For example, 
-```
-sedna.sh --module run_antismash --params "--help"
-Usage: run_antismash.py [-h] --input_sample INPUT_SAMPLE [--threads THREADS] [--sample_name SAMPLE_NAME] [--output_dir OUTPUT_DIR] [--overwrite] [--taxon TAXON]
-                        [--genefinding_tool GENEFINDING_TOOL] [--minlength MINLENGTH]
-
-Annotates BGC sequences utilizing the antiSMASH tool.
-
-options:
-  -h, --help            show this help message and exit
-  --input_sample INPUT_SAMPLE
-                        Input fasta file.
-  --threads THREADS     Number of threads.
-  --sample_name SAMPLE_NAME
-                        Sample name.
-  --output_dir OUTPUT_DIR
-                        Output directory.
-  --overwrite           Overwrite output directory.
-  --taxon TAXON         antiSMASH - {bacteria,fungi} Taxonomic classification of input sequence.
-  --genefinding_tool GENEFINDING_TOOL
-                        antiSMASH {glimmerhmm,prodigal,prodigal-m,none,error} Specify algorithm used for gene finding: GlimmerHMM, Prodigal, Prodigal Metagenomic/Anonymous mode, or none. The
-                        'error' option will raise an error if genefinding is attempted. The 'none' option will not run genefinding.
-  --minlength MINLENGTH
-                        antiSMASH - Only process sequences larger than <minlength>.
-                        
-```
-SeDNA is composed of different modules that must be run sequentially in a specific order.
-
-First, we need to annotate the BGC sequences in the assembled metagenomic sequences or Metagenome-Assembled Genomes (MAGs), provided as FASTA files. In this example, we will analyze three toy MAGs from the  [OceanDNA catalog](https://www.nature.com/articles/s41597-022-01392-5), artificially subsampled to include only a few BGCs, which can be found in the `tests/data` folder within the repository.
-
-The current version of SeDNA integrates three BGC annotation tools: [antiSMASH](https://github.com/antismash/antismash), [deepBGC](https://github.com/Merck/deepbgc), and [GECCO](https://github.com/zellerlab/GECCO). These tools can be run individually using the `run_<tool>` modules or all at once using the `run_all` option.
-
-Let’s navigate to the root of the repository (if you are not already there) and store all the sample files in a variable:
+SeDNA reads a tab-separated samplesheet with one row per assembly or MAG (FASTA):
 
 ```
-cd <path-to>/SeDNA
+sample_name	fasta
+OceanDNA-b11979_redu	tests/data/oceandna/OceanDNA-b11979_redu.fasta
+OceanDNA-b45222_redu	tests/data/oceandna/OceanDNA-b45222_redu.fasta
+OceanDNA-b9899_redu	tests/data/oceandna/OceanDNA-b9899_redu.fasta
 ```
 
-```
-SAMPLES=$(ls "tests/data/OceanDNA"-*_redu.fasta)
-```
-We will use the `tests` folder to save our example analysis.
-```
-OUTPUT_DIR=./tests/output/sedna_output
-```
-Now, we iterate over the input samples and annotate the BGC sequences using the three tools. For simplicity, we will use the `run_all` option.
+The file above ships as `tests/data/from_fasta.tsv`. It lists three toy MAGs from the [OceanDNA catalog](https://www.nature.com/articles/s41597-022-01392-5), artificially subsampled to include only a few BGCs. To run the whole pipeline on them:
 
 ```
-for s in ${SAMPLES}; do
-
-    SAMPLE_NAME=$(basename "${s}" .fasta)
-    echo "${SAMPLE_NAME}"
-    sedna.sh --module run_all \
-             --params "--input_sample ${s} \
-                      --sample_name ${SAMPLE_NAME} \
-                      --output_dir ${OUTPUT_DIR}"
-
-done
+nextflow run sedna.nf \
+    --from_fasta_tsv tests/data/from_fasta.tsv \
+    --birch_threshold 0.5 \
+    --output_dir tests/sedna-output
 ```
 
-Since we are annotating the same sequences with different tools, it is expected that some BGC sequences will be predicted by more than one tool. This means we may have duplicate BGC predictions. To obtain a de-replicated catalog, we need to run the `dereplicate` module as follows:
+Add `-resume` to continue an interrupted run, or to re-run with different parameters: only the modules affected by a changed parameter, and those downstream of them, are re-run. For example, changing `--birch_threshold` re-runs only module 6. Add `-profile slurm` to submit to a SLURM cluster with Apptainer.
+
+The pipeline runs six modules:
+
+| Module | Task | Runs |
+|---|---|---|
+| 1 | BGC annotation with [antiSMASH](https://github.com/antismash/antismash) | per sample |
+| 2 | BGC annotation with [deepBGC](https://github.com/Merck/deepbgc) | per sample |
+| 3 | BGC annotation with [GECCO](https://github.com/zellerlab/GECCO) | per sample |
+| 4 | Dereplication of the three tools' predictions | per sample |
+| 5 | Pfam domain annotation (pyHMMER + cath-resolve-hits) | per sample |
+| 6 | BGC embedding and clustering into Gene Cluster Families | once, all samples |
+
+Modules 1–3 run concurrently. Any of them can be dropped with `--skip_antismash`, `--skip_deepbgc` or `--skip_gecco`. Since the same sequences are annotated with different tools, some BGCs are predicted more than once; module 4 merges these duplicates into one catalog per sample, using the contig IDs and coordinates of the predictions. It works with any number of annotation tools, and writes the catalog in three versions (`longest`, `core`, `extended`; see Outputs). `--stop_at_module N` stops the pipeline after module N.
+
+Module 6 clusters the BGCs using [BIRCH](https://en.wikipedia.org/wiki/BIRCH), with BGC embeddings built by [Smooth Inverse Frequency (SIF)](https://openreview.net/pdf?id=SyK00v5xx) weighting of Pfam domain embeddings. `--embedding_method mean` uses an unweighted mean instead. `--birch_threshold` sets the granularity of the families.
+
+If the MAGs already have a genome-wide `hmmsearch` annotation, use `--input_mode from_annot` with a samplesheet that adds `gff` and `domtblout` columns. Module 5 then reuses that annotation instead of running pyHMMER.
+
+### Outputs
 
 ```
-for s in ${SAMPLES}; do
-
-    SAMPLE_NAME=$(basename "${s}" .fasta)
-    echo "${SAMPLE_NAME}"
-    sedna.sh --module dereplicate \
-             --params "--input_dir ${OUTPUT_DIR}/${SAMPLE_NAME}/bgc_annot/inter"
-           
-done                     
+tests/sedna-output/
+  intermediate/
+    module-1/<sample>/          antiSMASH: gbks/, annot_metadata.tsv
+    module-2/<sample>/          deepBGC:   gbks/, gbks_removed/, annot_metadata.tsv
+    module-3/<sample>/          GECCO:     gbks/, annot_metadata.tsv
+    module-4/<sample>/          dereplicated/{longest,core,extended}/ (the BGC catalog),
+                                overlapped/, partially_overlapped/, non_overlapped/
+    module-5/<sample>/          <bgc_id>_annotdoms_resolved.tsv, one per BGC
+    module-6/                   bgc_embeddings-sif.tsv, bgc_clust-sif-thres0.5.tsv
+  workables/                    symlinks to the module 6 tables
 ```
-This script will generate a folder named `sorted` within each output directory, where the de-replicated catalog can be found.  
-Let’s take a look at one of these:
 
-```
-ls ${OUTPUT_DIR}/OceanDNA-b11979_redu/bgc_annot/sorted/dereplicated/
-```
-This is what we should see:
-```
-annot_metadata.tsv gbks
-```
-`annot_metadata.tsv` is a TSV table containing the metadata of the BGCs that compose the de-replicated catalog, and it includes the following fields: `acc`, `bgc_class`, `start`, `end`, `length`, `on_edge`, `contig_id`, `contig_length`, `file`, `sample_name`, `tool`, `bgc_id`, `link`.  
-`gbks` is a folder containing the BGC sequences of the de-replicated catalog in GenBank format.
+The de-replicated catalog comes in three versions of the same BGCs, which differ only in the coordinates of BGCs predicted by several tools:
 
-Once we obtain the de-replicated catalog, we will cluster the BGC sequences predicted in the three samples.
-To do this, we must annotate the Pfam domains using the `cds_annot` module:
+| Version | Coordinates |
+|---|---|
+| `longest` | the longest prediction |
+| `core` | the region supported by the most tools (their intersection when they all overlap) |
+| `extended` | from the leftmost start to the rightmost end of all predictions |
 
-```
-for s in ${SAMPLES}; do
+`--derep_version` (default `longest`) selects the version used for domain annotation and clustering.
 
-    SAMPLE_NAME=$(basename "${s}" .fasta)
-    echo "${SAMPLE_NAME}"
-    sedna.sh --module annot_cds \
-             --params "--input_dir ${OUTPUT_DIR}/${SAMPLE_NAME}/bgc_annot/sorted/dereplicated"
-             
-done 
+Each `module-4/<sample>/dereplicated/<version>/annot_metadata.tsv` has the fields `acc`, `bgc_class`, `start`, `end`, `length`, `on_edge`, `contig_id`, `contig_length`, `file`, `sample_name`, `tool`, `bgc_id`, `link`, `bgc_class_formatted`, `tools`, `n_tools` and `members` (plus `core_support` in `core`). The BGC sequences themselves are in `dereplicated/<version>/gbks/` as GenBank files named `<bgc_id>.gbk`. `bgc_id` is `<tool>__<sample>__<contig>__<start>__<end>`, where `<tool>` lists all supporting tools joined by `+` in `core` and `extended`.
 
-```
-Finally, based on the domain annotations, we will cluster the BGC sequences using the cluster_sif module, which implements the Balanced Iterative Reducing and Clustering using Hierarchies [(BIRCH)](https://en.wikipedia.org/wiki/BIRCH) algorithm and utilizes the [Smooth Inverse Function (SIF)](https://openreview.net/pdf?id=SyK00v5xx) to construct the BGC embeddings.
+`bgc_embeddings-sif.tsv` holds the embedding of each BGC, which is useful for downstream analyses such as novelty or diversity assessment. `bgc_clust-sif-thres0.5.tsv` holds the clustering as a two-column table: the BGC ID, and the Gene Cluster Family (GCF) ID.
 
-```
-sedna.sh --module cluster_sif \
-         --params "--input_dir  ${OUTPUT_DIR} \
-                   --threshold 0.5 \
-                   --bgc_embeddings_tsv ${OUTPUT_DIR}/bgc_embeddings.tsv \
-                   --output_tsv ${OUTPUT_DIR}/clust.tsv"
-
-```              
-
-The file `${OUTPUT_DIR}/bgc_embeddings.tsv` contains the embedding of each BGC, which can be useful for downstream analysis, such as novelty or diversity assessment.
-
-The file `${OUTPUT_DIR}/clust.tsv` contains the actual clustering as a two-column TSV table, with the BGC ID and the Gene Cluster Family (GCF) ID in the first and second columns, respectively.
+Outputs of modules 1–5 are published only with `--full_output true` (the default).
 
 # How to uninstall
 
-To uninstall, deactivate the environment `sedna_main_env` and run the script `uninstall.sh` located in the `install` directory. This will remove all Conda environments and databases downloaded for running SeDNA.
+Remove the images (`docker rmi ghcr.io/pereiramemo/sedna/module-{1..6}:latest`) and the database and cache directory `~/.sedna`.
 
-```
-conda deactivate
-./install/uninstall.sh
-```
+The pre-Nextflow, conda-based version of SeDNA (`sedna.sh` and `install/`) is kept in `old/` for reference.
 
 
 # Citation
