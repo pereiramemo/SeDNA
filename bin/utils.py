@@ -703,6 +703,12 @@ def dereplicate_shared_contigs(metadata_df1=None,
     # Get contigs intersection
     shared_contigs_list = list(set(metadata_df1['contig_id']).intersection(metadata_df2['contig_id']))
 
+    # BGCs that lost a comparison (to a longer, or equal, overlapping BGC). The
+    # disjoint cases 6 and 12 add both BGCs to dereplicated_bgcs, which used to
+    # bring back a BGC already superseded by another pair of the same contig;
+    # losers are therefore removed once all pairs have been compared.
+    lost_bgcs = set()
+
     # Iterate through contigs
     for contig in shared_contigs_list:
 
@@ -748,6 +754,7 @@ def dereplicate_shared_contigs(metadata_df1=None,
 
                 if s1 == s2 and e1 < e2:
                     case = 1
+                    lost_bgcs.add((tool1, id1))
                     overlap = e1 - s1
                     overlapped_bgcs[tool1].update({id1: {'length': l1, 'overlap': overlap, 'case': case, 'match': id2, 'file': f1, 'row': tool1_row}})
                     overlapped_bgcs[tool2].update({id2: {'length': l2, 'overlap': overlap, 'case': case, 'match': id1, 'file': f2, 'row': tool2_row}})
@@ -761,6 +768,7 @@ def dereplicate_shared_contigs(metadata_df1=None,
 
                 if s1 > s2 and e1 < e2:
                     case = 2
+                    lost_bgcs.add((tool1, id1))
                     overlap = e1 - s1 + 1
                     overlapped_bgcs[tool1].update({id1: {'length': l1, 'overlap': overlap, 'case': case, 'match': id2, 'file': f1, 'row': tool1_row}})
                     overlapped_bgcs[tool2].update({id2: {'length': l2, 'overlap': overlap, 'case': case, 'match': id1, 'file': f2, 'row': tool2_row}})
@@ -774,6 +782,7 @@ def dereplicate_shared_contigs(metadata_df1=None,
 
                 if s1 > s2 and e1 == e2:
                     case = 3
+                    lost_bgcs.add((tool1, id1))
                     overlap = e1 - s1 + 1
                     overlapped_bgcs[tool1].update({id1: {'length': l1, 'overlap': overlap, 'case': case, 'match': id2, 'file': f1, 'row': tool1_row}})
                     overlapped_bgcs[tool2].update({id2: {'length': l2, 'overlap': overlap, 'case': case, 'match': id1, 'file': f2, 'row': tool2_row}})
@@ -787,6 +796,7 @@ def dereplicate_shared_contigs(metadata_df1=None,
 
                 if s1 > s2 and e1 > e2 and e2 > s1:
                     case = 4
+                    lost_bgcs.add((tool2, id2) if l1 >= l2 else (tool1, id1))
                     overlap = e2 - s1 + 1
                     if l1 >= l2:
                         lref = l1
@@ -814,6 +824,7 @@ def dereplicate_shared_contigs(metadata_df1=None,
 
                 if s1 > s2 and e1 > e2 and e2 == s1:
                     case = 5
+                    lost_bgcs.add((tool2, id2) if l1 >= l2 else (tool1, id1))
                     overlap = 1
                     partially_overlapped_bgcs[tool1].update({id1: {'length': l1, 'overlap': overlap, 'case': case, 'match': id2, 'file': f1, 'row': tool1_row}})
                     partially_overlapped_bgcs[tool2].update({id2: {'length': l2, 'overlap': overlap, 'case': case, 'match': id1, 'file': f2, 'row': tool2_row}})
@@ -847,6 +858,7 @@ def dereplicate_shared_contigs(metadata_df1=None,
 
                 if s1 == s2 and e1 > e2:
                     case = 7
+                    lost_bgcs.add((tool2, id2))
                     overlap = e2 - s2 + 1
                     overlapped_bgcs[tool1].update({id1: {'length': l1, 'overlap': overlap, 'case': case, 'match': id2, 'file': f1, 'row': tool1_row}})
                     overlapped_bgcs[tool2].update({id2: {'length': l2, 'overlap': overlap, 'case': case, 'match': id1, 'file': f2, 'row': tool2_row}})
@@ -860,6 +872,7 @@ def dereplicate_shared_contigs(metadata_df1=None,
 
                 if s1 < s2 and e1 > e2:
                     case = 8
+                    lost_bgcs.add((tool2, id2))
                     overlap = e2 - s2 + 1
                     overlapped_bgcs[tool1].update({id1: {'length': l1, 'overlap': overlap, 'case': case, 'match': id2, 'file': f1, 'row': tool1_row}})
                     overlapped_bgcs[tool2].update({id2: {'length': l2, 'overlap': overlap, 'case': case, 'match': id1, 'file': f2, 'row': tool2_row}})
@@ -873,6 +886,7 @@ def dereplicate_shared_contigs(metadata_df1=None,
 
                 if s1 < s2 and e1 == e2:
                     case = 9
+                    lost_bgcs.add((tool2, id2))
                     overlap = e2 - s2 + 1
                     overlapped_bgcs[tool1].update({id1: {'length': l1, 'overlap': overlap, 'case': case, 'match': id2, 'file': f1, 'row': tool1_row}})
                     overlapped_bgcs[tool2].update({id2: {'length': l2, 'overlap': overlap, 'case': case, 'match': id1, 'file': f2, 'row': tool2_row}})
@@ -886,6 +900,7 @@ def dereplicate_shared_contigs(metadata_df1=None,
 
                 if s1 < s2 and e1 < e2 and s2 < e1:
                     case = 10
+                    lost_bgcs.add((tool2, id2) if l1 >= l2 else (tool1, id1))
                     overlap = e1 - s2 + 1
 
                     if l1 >= l2:
@@ -914,6 +929,7 @@ def dereplicate_shared_contigs(metadata_df1=None,
 
                 if s1 < s2 and e1 < e2 and e1 == s2:
                     case = 11
+                    lost_bgcs.add((tool2, id2) if l1 >= l2 else (tool1, id1))
                     overlap = 1
                     partially_overlapped_bgcs[tool1].update({id1: {'length': l1, 'overlap': overlap, 'case': case, 'match': id2, 'file': f1, 'row': tool1_row}})
                     partially_overlapped_bgcs[tool2].update({id2: {'length': l2, 'overlap': overlap, 'case': case, 'match': id1, 'file': f2, 'row': tool2_row}})
@@ -947,12 +963,16 @@ def dereplicate_shared_contigs(metadata_df1=None,
 
                 if s1 == s2 and e1 == e2:
                     case = 13
+                    lost_bgcs.add((tool2, id2))
                     overlap = e1 - s1 + 1
                     overlapped_bgcs[tool1].update({id1: {'length': l1, 'overlap': overlap, 'case': case, 'match': id2, 'file': f1, 'row': tool1_row}})
                     overlapped_bgcs[tool2].update({id2: {'length': l2, 'overlap': overlap, 'case': case, 'match': id1, 'file': f2, 'row': tool2_row}})
                     dereplicated_bgcs[tool1].update({id1: {'file': f1, 'row': tool1_row}})
-                    if id1 in dereplicated_bgcs[tool2]:
-                        del dereplicated_bgcs[tool2][id1]  # id2 could exists if it was the longer seq in cases 6th or 12th in a previous iteration
+                    if id2 in dereplicated_bgcs[tool2]:
+                        del dereplicated_bgcs[tool2][id2]  # id2 could exists if it was the longer seq in cases 6th or 12th in a previous iteration
+
+    for tool, bgc_id in lost_bgcs:
+        dereplicated_bgcs[tool].pop(bgc_id, None)
 
     output_dict = {'dereplicated_bgcs': dereplicated_bgcs,
                    'overlapped_bgcs': overlapped_bgcs,

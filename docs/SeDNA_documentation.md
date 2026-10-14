@@ -755,8 +755,9 @@ modifying the pipeline.
    (e.g. the same locus in two MAGs, or a locus split across two contigs by the assembler) are not
    merged; they are treated as distinct catalog entries and are expected to be reunited later at
    the GCF level.
-7. **Case 13 in `dereplicate_shared_contigs`** (`bin/utils.py`, formerly `dsc.py`) deletes `dereplicated_bgcs[tool2][id1]` (note: `id1`, not `id2`) when the
-   two intervals are identical. Worth reviewing.
+7. *(Fixed after the Nextflow port, with §11.16.)* **Case 13 in `dereplicate_shared_contigs`**
+   (`bin/utils.py`, formerly `dsc.py`) deleted `dereplicated_bgcs[tool2][id1]` (`id1`, not `id2`)
+   when the two intervals are identical. It now deletes `id2`.
 8. *(Resolved by the Nextflow port.)* The old `dereplicate.py` `--metadata` path crashed with a
    `TypeError` when used without `--input_dir`. `bin/sedna-module-4.py` takes only `--input_dirs`
    and a required `--output_dir`.
@@ -809,6 +810,13 @@ modifying the pipeline.
     accession suffix `_<start>-<end>`). This changes the coordinates and `bgc_id` of every antiSMASH or
     deepBGC BGC not starting at position 0, and can change dereplication results. Details in
     `bugs/001-antismash-deepbgc-relative-coordinates.md`.
+16. *(Fixed after the Nextflow port.)* **A BGC that lost a comparison could come back.**
+    `dereplicate_shared_contigs` compares every pair of BGCs of a shared contig. The disjoint cases
+    6 and 12 add both BGCs to the catalog, so a BGC already superseded by a longer one in an earlier
+    pair was re-added whenever a later pair found it disjoint from another BGC. Any contig with two
+    or more predictions from one tool was exposed, regardless of the number of tools. Every loser is
+    now recorded and removed once all pairs of the round are compared; the 13 cases, longest-wins
+    and `--overlap_thres` are unchanged. Details in `bugs/002-dereplication-readds-superseded-bgcs.md`.
 ---
 
 ## 12. References
