@@ -1,7 +1,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // MODULE 5: Pfam domain annotation of the dereplicated BGCs
 // (pyHMMER + cath-resolve-hits)
-// Input:  module-4 output dir (per sample)
+// Input:  module-4 dereplicated/<version> dir (per sample; sedna.nf picks the
+//         version from --derep_version)
 // Output: module-5/<sample>/<bgc_id>_annotdoms_resolved.tsv
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -24,7 +25,7 @@ process MODULE5 {
     def cut_ga = params.cut_ga.toBoolean() ? "--cut_ga" : "--no-cut_ga"
     """
     sedna-module-5.py \
-        --input_dir     ${derep_dir}/dereplicated \
+        --input_dir     ${derep_dir} \
         --cds_id        ${params.cds_id} \
         --hmm_db        ${params.pfam_hmm ?: "${params.db_dir}/pfam/Pfam-A.hmm"} \
         --evalue_thres  ${params.evalue_thres} \
@@ -40,7 +41,7 @@ process MODULE5 {
 // genome-wide hmmsearch domtblout + GFF instead of re-running pyHMMER. Reuses
 // the same container/script as MODULE5 and produces the same output shape, so
 // MODULE6 cannot tell which entry path ran.
-// Input:  module-4 output dir + GFF + domtblout (per sample)
+// Input:  module-4 dereplicated/<version> dir + GFF + domtblout (per sample)
 // Output: module-5/<sample>/<bgc_id>_annotdoms_resolved.tsv
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -62,7 +63,7 @@ process MODULE5_PRECOMPUTED {
     script:
     """
     sedna-module-5.py \
-        --input_dir   ${derep_dir}/dereplicated \
+        --input_dir   ${derep_dir} \
         --gff         ${gff} \
         --domtblout   ${domtblout} \
         --nslots      ${task.cpus} \

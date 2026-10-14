@@ -56,6 +56,12 @@ workflow {
         MODULE4 — Dereplication:
           --overlap_thres   NUM   Overlap fraction separating overlapped from partially overlapped (default: ${params.overlap_thres})
           --synonyms_file   PATH  BGC class synonyms table (default: ${params.synonyms_file})
+          --derep_version   STR   Catalog version fed to MODULE5-6 (default: ${params.derep_version}):
+                                    longest  - the longest prediction of each locus
+                                    core     - the region supported by the most tools
+                                               (all tools' intersection when they all overlap)
+                                    extended - leftmost start to rightmost end of all predictions
+                                  All three are always written to module-4/<sample>/dereplicated/
 
         MODULE5 — Domain annotation:
           --pfam_hmm        PATH  Pfam-A HMM file (default: <db_dir>/pfam/Pfam-A.hmm)
@@ -74,6 +80,9 @@ workflow {
     }
 
     stop = params.stop_at_module as Integer
+    if (!(params.derep_version in ["longest", "core", "extended"])) {
+        error "Unknown --derep_version '${params.derep_version}'; expected one of: longest, core, extended"
+    }
     log.info "Pipeline will run up to module ${stop}"
 
     // Input samplesheet, selected by --input_mode
@@ -127,13 +136,22 @@ workflow {
             .groupTuple(by: 0, size: n_tools)
             .map { sample_name, ranks, dirs ->
                 tuple(sample_name, [ranks, dirs].transpose().sort { it[0] }.collect { it[1] }) }
-            // -> tuple(sample_name, [tool dirs in tool order])
+            .join(fasta_ch, by: 0)
+            .map { sample_name, dirs, fasta -> tuple(sample_name, fasta, dirs) }
+            // -> tuple(sample_name, fasta, [tool dirs in tool order])
         module4_out   = MODULE4(module4_in_ch, file(params.synonyms_file, checkIfExists: true))
     }
 
     // MODULE5: Pfam domain annotation of each dereplicated catalog, or -- when
     // --input_mode from_annot supplied gff/domtblout -- import of those
     if (stop >= 5) {
+        // The catalog version is picked here, as an input path, not inside the
+        // process script: Nextflow's task hash ignores param values used only in
+        // the script, so -resume would otherwise reuse another version's results
+        derep_version_ch = module4_out.derep
+            .map { sample_name, derep_dir ->
+                tuple(sample_name, derep_dir.resolve("dereplicated/${params.derep_version}")) }
+
         if (params.input_mode == "from_annot") {
 
             precomputed_annot_ch = channel.fromPath(params.from_annot_tsv, checkIfExists: true)
@@ -142,12 +160,12 @@ workflow {
                                     file(row.gff, checkIfExists: true),
                                     file(row.domtblout, checkIfExists: true)) }
 
-            module5_in_ch = module4_out.derep
+            module5_in_ch = derep_version_ch
                 .join(precomputed_annot_ch, by: 0) // -> tuple(sample_name, derep_dir, gff, domtblout)
             module5_out = MODULE5_PRECOMPUTED(module5_in_ch)
 
         } else {
-            module5_out = MODULE5(module4_out.derep)
+            module5_out = MODULE5(derep_version_ch)
         }
     }
 

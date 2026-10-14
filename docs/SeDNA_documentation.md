@@ -41,7 +41,9 @@ FASTA (MAGs / assembled contigs), one row per sample in the samplesheet
         |  [2] Dereplication           MODULE4
         |      coordinate-based merging of the three per-tool predictions
         v
-   non-redundant BGC catalog          (intermediate/module-4/<sample>/dereplicated/)
+   non-redundant BGC catalog, in three versions: longest | core | extended
+                                      (intermediate/module-4/<sample>/dereplicated/<version>/)
+        |   --derep_version picks the one passed on
         |
         |  [3] Domain annotation       MODULE5  (or MODULE5_PRECOMPUTED, --input_mode from_annot)
         |      pyHMMER hmmsearch vs Pfam-A  ->  cath-resolve-hits
@@ -285,8 +287,9 @@ Two governing rules:
   in the audit output.
 
 Because the merge is iterative, a BGC that "won" in an earlier comparison can be displaced by a
-longer competitor later; the code explicitly removes such superseded entries from the dereplicated
-set at each case.
+longer competitor later. Every BGC that loses a comparison is recorded and removed once all pairs
+of the round have been compared, so a later disjoint pair (cases 6 and 12) cannot bring it back
+(§11.16).
 
 **(b) Non-shared contigs** (`bin/utils.py::dereplicate_non_shared_contigs`). BGCs on contigs seen by only one of the
 two tables cannot conflict with anything, so they are carried over directly (case 14).
@@ -319,26 +322,71 @@ NRPS                  NRP;Polyketide     NRP                 nrp
 The `tool` field of each BGC selects the lookup column (`bgc_class_<tool>`), and the resulting
 value is attached to the metadata row as a new `bgc_class_formatted` field. The step runs after
 the GBKs are copied and before the metadata tables are written (`sedna-module-4.py` §3.7),
-so `dereplicated/annot_metadata.tsv` carries **both** the tool's original `bgc_class` and the
+so every `dereplicated/<version>/annot_metadata.tsv` carries **both** the tool's original `bgc_class` and the
 harmonised `bgc_class_formatted`.
 
 The mapping is applied only to the dereplicated dictionary; §11.9 and §11.10 describe two sharp
 edges in the current implementation (an unguarded lookup, and leakage of the new column into the
 audit tables).
 
-### 3.4 Output
+### 3.4 Three versions of the catalog: longest, core and extended
 
-`bin/sedna-module-4.py` writes four sibling directories under `module-4/<sample>/`:
+The pairwise merge picks one prediction per locus, the longest. The tools rarely agree on the
+boundaries, so module 4 also derives two coordinate-level consensus versions of the same catalog:
+
+| Version | Coordinates of a BGC predicted by several tools |
+|---|---|
+| `longest` | the longest prediction (the result of §3.2) |
+| `core` | the region supported by the most tools: their intersection when they all overlap; when they only overlap in a chain, the region covered by the most tools, and the longest such region on a tie (then the leftmost) |
+| `extended` | from the leftmost start to the rightmost end of all the supporting predictions |
+
+All three have the same BGCs, one per `longest` entry, so they can be compared row by row. A BGC
+predicted by a single tool has the same coordinates and `bgc_id` in all three.
+
+**Supporting predictions.** The members of a `longest` BGC R are R itself plus every prediction
+that is not itself in `longest` and is reachable from R through overlaps (touching counts, as in
+cases 5 and 11) without passing through another `longest` BGC. Reachability, rather than direct
+overlap with R, also catches a prediction that lost to an intermediate winner which later lost to
+R. `bin/utils.py::find_bgc_groups`.
+
+**Support** is the number of *distinct tools* covering a position, so a tool that splits one locus
+into two predictions counts once (`bin/utils.py::most_supported_region`).
+
+**Any number of tools.** Both derived versions are computed from the `longest` catalog and the
+input tables only. Nothing in them names a tool or assumes three, so they work unchanged for any
+number of annotation tools merged by `recursive_dereplication`.
+
+**GBKs.** The `core` and `extended` regions match no tool's GBK, so module 4 writes new
+antiSMASH-like region GBKs (the same layout as `format_gbks`):
+
+- **Sequence.** Cut from the sample FASTA, which is passed to MODULE4 for this.
+- **CDSs.** Those of the members, lifted onto contig coordinates. A member GBK's origin on the
+  contig is found by matching its sequence, not from tool-specific metadata
+  (`bin/utils.py::locate_record`).
+- **Gene calls.** Two calls on the same strand ending at the same stop codon are treated as the same
+  gene, and the representative's call is kept (`collect_cds`).
+- **What is kept.** `extended` keeps all CDSs. `core` keeps only the CDSs entirely inside the core
+  region, so a gene cut by the core boundary is dropped.
+
+### 3.5 Output
+
+`bin/sedna-module-4.py` writes, under `module-4/<sample>/`:
 
 ```
 module-4/<sample>/
-  dereplicated/           <- the catalog: one entry per unique locus
-    annot_metadata.tsv
-    gbks/                 <- copies of the winning per-tool GBK files, named <bgc_id>.gbk
+  dereplicated/
+    longest/              <- one entry per unique locus: the longest prediction
+      annot_metadata.tsv
+      gbks/               <- copies of the winning per-tool GBK files, named <bgc_id>.gbk
+    core/                 <- same BGCs, core coordinates; GBKs built by module 4
+    extended/             <- same BGCs, extended coordinates; GBKs built by module 4
   overlapped/             <- audit: predictions that matched another prediction
   partially_overlapped/   <- audit: staggered matches below --overlap_thres
   non_overlapped/         <- audit: predictions with no counterpart
 ```
+
+`--derep_version longest|core|extended` (default `longest`) selects the version annotated by
+MODULE5 and clustered by MODULE6. All three are always written.
 
 Each retained BGC receives a stable, self-describing identifier:
 
@@ -346,13 +394,33 @@ Each retained BGC receives a stable, self-describing identifier:
 bgc_id = <tool>__<sample_name>__<contig_id>__<start>__<end>
 ```
 
-and `dereplicated/annot_metadata.tsv` gains three columns on top of the per-tool schema of §2.3:
-`bgc_id`, `link` (the GBK path relative to the table, `gbks/<bgc_id>.gbk`) and `bgc_class_formatted` (§3.3). The three
-audit tables get `bgc_id` and `link` but, by the aliasing described in §11.10, an inconsistent
-`bgc_class_formatted`. The provenance of every sequence is kept in the `tool` and `file` columns
-and in the `bgc_id` prefix. Before the Nextflow port the catalog held symlinks into the per-tool
-directories. Those would point into upstream task work dirs, which are neither mounted into the
-MODULE4 container nor kept after `nextflow clean`, so the catalog now holds copies.
+In `core` and `extended`, `<tool>` is the list of supporting tools joined by `+`, e.g.
+`antismash+gecco__<sample>__<contig>__5538__9137`.
+
+Every `dereplicated/<version>/annot_metadata.tsv` has the per-tool schema of §2.3 plus these
+columns:
+
+| Column | Content |
+|---|---|
+| `bgc_id` | the identifier above |
+| `link` | the GBK path relative to the table, `gbks/<bgc_id>.gbk` |
+| `bgc_class_formatted` | the harmonised class (§3.3) |
+| `tools` | the supporting tools, in input order, joined by `+` |
+| `n_tools` | the number of supporting tools |
+| `members` | the `bgc_id`s of the supporting predictions |
+| `core_support` | `core` only: the number of tools covering the core region |
+
+How some fields are filled in `core` and `extended`:
+
+- `tool`, `bgc_class` and `bgc_class_formatted` are those of the representative (the `longest`
+  entry).
+- `start`, `end` and `length` are the version's own coordinates.
+- `on_edge`, for BGCs with several members, is recomputed as `start < 3 or contig_length - end <= 30`.
+
+The three audit tables get `bgc_id` and `link`, but, because of the aliasing described in §11.10,
+an inconsistent `bgc_class_formatted`. Before the Nextflow port the catalog held symlinks into the
+per-tool directories. Those would point into upstream task work dirs, which are neither mounted
+into the MODULE4 container nor kept after `nextflow clean`, so the catalog now holds copies.
 
 ---
 
@@ -894,7 +962,7 @@ newer than 3.7.
   became `bin/download_dbs.py`. Module 1 now passes `--databases` to antiSMASH, which the old wrapper
   never did, and module 2 exports `DEEPBGC_DOWNLOADS_DIR`.
 - **Isolated work dirs.** Module 4 copies the catalog GBKs instead of symlinking them, writes `link`
-  as a relative path, and remaps each per-tool `file` path onto the staged copy (§3.4).
+  as a relative path, and remaps each per-tool `file` path onto the staged copy (§3.5).
 - **Deterministic merge order.** Module 4 merges antiSMASH → deepBGC → GECCO, where the old script
   used filesystem walk order.
 - **Deterministic GCFs.** BIRCH depends on insertion order. The old `cluster_sif.py` used `os.walk`

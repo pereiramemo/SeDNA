@@ -1,7 +1,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // MODULE 4: Dereplication of the BGCs predicted by modules 1-3
 // Input:  module-1/2/3 output dirs of one sample (whichever ran)
-// Output: module-4/<sample>/{dereplicated,overlapped,partially_overlapped,non_overlapped}/
+// Output: module-4/<sample>/dereplicated/{longest,core,extended}/ plus the audit dirs
+//         {overlapped,partially_overlapped,non_overlapped}/
 // ─────────────────────────────────────────────────────────────────────────────
 
 process MODULE4 {
@@ -18,7 +19,7 @@ process MODULE4 {
     // (tool_1, tool_2, ...) in the order sedna.nf sorted them: antiSMASH, deepBGC, GECCO.
     // That order fixes the pairwise merge order, which can change which of two
     // equal-length BGCs is kept.
-    tuple val(sample_name), path(tool_dirs, stageAs: "tool_*")
+    tuple val(sample_name), path(fasta), path(tool_dirs, stageAs: "tool_*")
     path(synonyms_file)
 
     output:
@@ -29,6 +30,7 @@ process MODULE4 {
     """
     sedna-module-4.py \
         --input_dirs     ${input_dirs} \
+        --input_fasta    ${fasta} \
         --overlap_thres  ${params.overlap_thres} \
         --synonyms_file  ${synonyms_file} \
         --output_dir     ${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name} \

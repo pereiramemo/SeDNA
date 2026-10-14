@@ -679,8 +679,8 @@ def resolve_domain_structure(path2names: list) -> None:
 # 4.1 make_bgc_id: <tool>__<sample_name>__<contig_id>__<start>__<end>
 ###############################################################################
 
-def make_bgc_id(row_as_dict: dict) -> str:
-    bgc_id_str_list = [row_as_dict['tool'], row_as_dict['sample_name'],
+def make_bgc_id(row_as_dict: dict, prefix_field: str = 'tool') -> str:
+    bgc_id_str_list = [row_as_dict[prefix_field], row_as_dict['sample_name'],
                        row_as_dict['contig_id'], row_as_dict['start'],
                        row_as_dict['end']]
     return '__'.join([str(s) for s in bgc_id_str_list])
@@ -1077,11 +1077,13 @@ def create_df(input_dict: dict = None,
               output_dir: str = None,
               output_dir_gbks: str = None,
               df: bool = False,
-              tsv: bool = True):
+              tsv: bool = True,
+              id_prefix_field: str = 'tool'):
     '''
     Build the metadata table of a BGC dictionary, adding `bgc_id` and `link`.
     `link` is the GBK path relative to output_dir (gbks/<bgc_id>.gbk), so the
-    published table stays valid wherever output_dir is moved.
+    published table stays valid wherever output_dir is moved. id_prefix_field
+    names the column used as the bgc_id prefix (`tools` for core/extended).
     '''
     import pandas as pd
 
@@ -1094,7 +1096,7 @@ def create_df(input_dict: dict = None,
             input_as_row = input_dict[tool][index_value]['row'].to_frame().T
 
             # Create bgc_id
-            bgc_id_str = make_bgc_id(row_as_dict)
+            bgc_id_str = make_bgc_id(row_as_dict, id_prefix_field)
             input_as_row['bgc_id'] = bgc_id_str
 
             # Create the link field, containing the path of the sequence
@@ -1151,3 +1153,213 @@ def map_synonyms(synonyms_file: str = None, input_dict: dict = None) -> dict:
             input_dict[tool][index_value]['row'] = row_as_df
 
     return input_dict
+
+###############################################################################
+# 4.8 find_bgc_groups: the predictions supporting each representative BGC
+###############################################################################
+
+def find_bgc_groups(preds: list, rep_ids: list) -> dict:
+    '''
+    Return {rep_id: [member bgc_id, ...]} with the representative first and
+    the rest in input order.
+
+    preds is every input prediction, of every tool, in input-table order, as
+    dicts with bgc_id, contig_id, start and end. rep_ids are the bgc_ids kept
+    by recursive_dereplication (the longest version). Two predictions overlap
+    when they share or touch a coordinate (s1 <= e2 and s2 <= e1), which is
+    what the 13 dereplication cases merge into one locus. A representative's
+    members are the non-representative predictions reachable from it through
+    overlaps without crossing another representative; reachability (not
+    direct overlap) also catches a prediction that lost to an intermediate
+    winner which in turn lost to the representative. Nothing here depends on
+    which tools, or how many, produced the predictions.
+    '''
+    order = {p['bgc_id']: i for i, p in enumerate(preds)}
+    rep_set = set(rep_ids)
+
+    by_contig = {}
+    for p in preds:
+        by_contig.setdefault(p['contig_id'], []).append(p)
+
+    neighbours = {p['bgc_id']: [] for p in preds}
+    for contig_preds in by_contig.values():
+        for i in range(len(contig_preds)):
+            for j in range(i + 1, len(contig_preds)):
+                a = contig_preds[i]
+                b = contig_preds[j]
+                if a['start'] <= b['end'] and b['start'] <= a['end']:
+                    neighbours[a['bgc_id']].append(b['bgc_id'])
+                    neighbours[b['bgc_id']].append(a['bgc_id'])
+
+    groups = {}
+    for rep_id in rep_ids:
+        members = {rep_id}
+        queue = [rep_id]
+        while queue:
+            current = queue.pop()
+            for n in neighbours.get(current, []):
+                if n in members or n in rep_set:
+                    continue
+                members.add(n)
+                queue.append(n)
+        others = sorted(members - {rep_id}, key=lambda m: order[m])
+        groups[rep_id] = [rep_id] + others
+    return groups
+
+###############################################################################
+# 4.9 most_supported_region: the core coordinates of a group
+###############################################################################
+
+def most_supported_region(intervals: list) -> tuple:
+    '''
+    Return (start, end, support) of the region covered by the most distinct
+    tools, for intervals given as (start, end, tool) in zero-based half-open
+    coordinates.
+
+    When every tool overlaps every other, this is their intersection. When
+    they only overlap in a chain, it is the region with the highest support;
+    among equally supported regions the longest wins, then the leftmost. A
+    tool with several intervals counts once. Valid for any number of tools.
+    '''
+    breakpoints = sorted(set([s for s, e, t in intervals] + [e for s, e, t in intervals]))
+
+    # support of each elementary segment [b_i, b_i+1)
+    segments = []
+    for b1, b2 in zip(breakpoints[:-1], breakpoints[1:]):
+        tools = set(t for s, e, t in intervals if s <= b1 and e >= b2)
+        segments.append((b1, b2, len(tools)))
+
+    if len(segments) == 0:
+        # all intervals have zero length at the same point
+        s, e, t = intervals[0]
+        return s, e, len(set(t for s, e, t in intervals))
+
+    max_support = max(support for b1, b2, support in segments)
+
+    # merge adjacent max-support segments into runs
+    runs = []
+    for b1, b2, support in segments:
+        if support != max_support:
+            continue
+        if runs and runs[-1][1] == b1:
+            runs[-1][1] = b2
+        else:
+            runs.append([b1, b2])
+
+    best = max(runs, key=lambda r: (r[1] - r[0], -r[0]))
+    return best[0], best[1], max_support
+
+###############################################################################
+# 4.10 locate_record: a GBK record's origin on its contig
+###############################################################################
+
+def locate_record(contig_seq: str, record_seq: str, start: int) -> int:
+    '''
+    Return the zero-based contig position where record_seq begins.
+
+    Found by sequence, not from tool-specific metadata, so that it works for
+    any annotation tool: the record's own origin need not equal the BGC start
+    (an antiSMASH region can be wider than its cand_cluster). Tries `start`
+    first, then the occurrence nearest to it.
+    '''
+    contig_seq = contig_seq.upper()
+    record_seq = record_seq.upper()
+    if contig_seq[start:start + len(record_seq)] == record_seq:
+        return start
+
+    hits = []
+    i = contig_seq.find(record_seq)
+    while i != -1:
+        hits.append(i)
+        i = contig_seq.find(record_seq, i + 1)
+    if len(hits) == 0:
+        return None
+    return min(hits, key=lambda h: abs(h - start))
+
+###############################################################################
+# 4.11 collect_cds: the CDSs of a group's members, on contig coordinates
+###############################################################################
+
+def collect_cds(member_gbks: list, contig_seq: str) -> list:
+    '''
+    Return the CDS features of the member GBKs, shifted to contig coordinates
+    and deduplicated.
+
+    member_gbks is a list of (gbk_path, start) in priority order (the
+    representative first). Two CDSs on the same strand with the same stop
+    coordinate are the same gene called by different gene finders; the copy
+    of the higher-priority member is kept. A missing translation is computed,
+    as format_gbks does.
+    '''
+    from Bio import SeqIO
+
+    cds_features = []
+    seen = set()
+    for gbk_path, start in member_gbks:
+        record = SeqIO.read(gbk_path, "genbank")
+        origin = locate_record(contig_seq, str(record.seq), int(start))
+        if origin is None:
+            print(f"Error: the sequence of {gbk_path} was not found in its contig", file=sys.stderr)
+            sys.exit(1)
+
+        for feature in record.features:
+            if feature.type != "CDS":
+                continue
+            if not feature.qualifiers.get("translation", None):
+                feature.qualifiers["transl_table"] = [feature.qualifiers.get("transl_table", 11)]
+                feature.qualifiers["translation"] = [str(feature.translate(record, cds=False).seq)]
+            shifted = feature._shift(origin)
+            strand = shifted.location.strand
+            stop = int(shifted.location.start) if strand == -1 else int(shifted.location.end)
+            if (strand, stop) in seen:
+                continue
+            seen.add((strand, stop))
+            cds_features.append(shifted)
+
+    return sorted(cds_features, key=lambda f: int(f.location.start))
+
+###############################################################################
+# 4.12 write_region_gbk: an antiSMASH-like region GBK for a contig interval
+###############################################################################
+
+def write_region_gbk(contig_id: str, contig_seq: str, start: int, end: int,
+                     cds_features: list, bgc_class: str, on_edge: str,
+                     tool: str, output_gbk: str) -> int:
+    '''
+    Write the contig interval [start, end) as an antiSMASH-like region GBK
+    (same layout as format_gbks), holding the CDSs entirely inside it. Return
+    the number of CDSs written.
+    '''
+    from Bio.Seq import Seq
+    from Bio.SeqFeature import FeatureLocation, SeqFeature
+    from Bio.SeqRecord import SeqRecord
+
+    record = SeqRecord(Seq(contig_seq[start:end]), id=contig_id, name=contig_id,
+                       description=contig_id)
+    record.annotations["molecule_type"] = "DNA"
+    record.annotations["accessions"] = [contig_id]
+    record.annotations["structured_comment"] = {
+        "antiSMASH-Data": {
+            "Version": "Simulated",
+            "Orig. start": start,
+            "Orig. end": end,
+            "Note": "SeDNA dereplicated region built from several BGC predictions"}}
+
+    features = [SeqFeature(FeatureLocation(0, end - start), type="protocluster")]
+    region_feature = SeqFeature(FeatureLocation(0, end - start), type="region")
+    region_feature.qualifiers["contig_edge"] = [on_edge]
+    region_feature.qualifiers["product"] = [bgc_class]
+    region_feature.qualifiers["tool"] = [tool]
+    features.append(region_feature)
+
+    n_cds = 0
+    for feature in cds_features:
+        if int(feature.location.start) >= start and int(feature.location.end) <= end:
+            features.append(feature._shift(-start))
+            n_cds += 1
+    record.features = features
+
+    with open(output_gbk, "w") as handle:
+        from Bio import SeqIO
+        SeqIO.write(record, handle, "genbank")
+    return n_cds
