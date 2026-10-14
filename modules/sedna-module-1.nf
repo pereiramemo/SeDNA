@@ -15,6 +15,10 @@ process MODULE1 {
 
     input:
     tuple val(sample_name), path(fasta)
+    // opts: the params this script uses (built in sedna.nf). They come in as an
+    // input so that they are part of the task hash: Nextflow does not hash
+    // param values read inside the script, and -resume would reuse stale results
+    val(opts)
 
     output:
     tuple val(sample_name), path("${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name}"), emit: annot
@@ -24,10 +28,10 @@ process MODULE1 {
     sedna-module-1.py \
         --input_fasta       ${fasta} \
         --sample_name       ${sample_name} \
-        --antismash_db      ${params.antismash_db ?: "${params.db_dir}/antismash"} \
-        --taxon             ${params.taxon} \
-        --genefinding_tool  ${params.genefinding_tool} \
-        --minlength         ${params.minlength} \
+        --antismash_db      ${opts.antismash_db} \
+        --taxon             ${opts.taxon} \
+        --genefinding_tool  ${opts.genefinding_tool} \
+        --minlength         ${opts.minlength} \
         --nslots            ${task.cpus} \
         --output_dir        ${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name} \
         --overwrite

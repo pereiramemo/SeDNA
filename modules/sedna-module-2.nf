@@ -15,6 +15,10 @@ process MODULE2 {
 
     input:
     tuple val(sample_name), path(fasta)
+    // opts: the params this script uses (built in sedna.nf). They come in as an
+    // input so that they are part of the task hash: Nextflow does not hash
+    // param values read inside the script, and -resume would reuse stale results
+    val(opts)
 
     output:
     tuple val(sample_name), path("${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name}"), emit: annot
@@ -24,10 +28,10 @@ process MODULE2 {
     sedna-module-2.py \
         --input_fasta      ${fasta} \
         --sample_name      ${sample_name} \
-        --deepbgc_db       ${params.deepbgc_db ?: "${params.db_dir}/deepbgc/data"} \
-        --score_thres      ${params.deepbgc_score_thres} \
-        --cds_count_thres  ${params.deepbgc_cds_count_thres} \
-        --minlength        ${params.minlength} \
+        --deepbgc_db       ${opts.deepbgc_db} \
+        --score_thres      ${opts.score_thres} \
+        --cds_count_thres  ${opts.cds_count_thres} \
+        --minlength        ${opts.minlength} \
         --nslots           ${task.cpus} \
         --output_dir       ${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name} \
         --overwrite

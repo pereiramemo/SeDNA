@@ -885,6 +885,13 @@ modifying the pipeline.
     or more predictions from one tool was exposed, regardless of the number of tools. Every loser is
     now recorded and removed once all pairs of the round are compared; the 13 cases, longest-wins
     and `--overlap_thres` are unchanged. Details in `bugs/002-dereplication-readds-superseded-bgcs.md`.
+17. *(Fixed after the Nextflow port.)* **`-resume` ignored changed parameters.** Every process read
+    its settings (`--evalue_thres`, `--overlap_thres`, `--birch_threshold`, the tool thresholds, the
+    database paths, …) as `params.*` inside its `script:` block. Nextflow 26's task hash covers the
+    script text, the inputs, the container and the `bin/` script, but not those param values, so
+    `-resume` after changing one silently reused the old results. Each process now receives the
+    params its script uses as a `val(opts)` map, built in `sedna.nf`, which is part of the hash.
+    Details in `bugs/003-resume-ignores-param-changes.md`.
 ---
 
 ## 12. References

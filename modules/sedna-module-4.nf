@@ -21,6 +21,10 @@ process MODULE4 {
     // equal-length BGCs is kept.
     tuple val(sample_name), path(fasta), path(tool_dirs, stageAs: "tool_*")
     path(synonyms_file)
+    // opts: the params this script uses (built in sedna.nf). They come in as an
+    // input so that they are part of the task hash: Nextflow does not hash
+    // param values read inside the script, and -resume would reuse stale results
+    val(opts)
 
     output:
     tuple val(sample_name), path("${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name}"), emit: derep
@@ -31,7 +35,7 @@ process MODULE4 {
     sedna-module-4.py \
         --input_dirs     ${input_dirs} \
         --input_fasta    ${fasta} \
-        --overlap_thres  ${params.overlap_thres} \
+        --overlap_thres  ${opts.overlap_thres} \
         --synonyms_file  ${synonyms_file} \
         --output_dir     ${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name} \
         --overwrite

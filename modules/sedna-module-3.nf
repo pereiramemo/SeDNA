@@ -15,6 +15,10 @@ process MODULE3 {
 
     input:
     tuple val(sample_name), path(fasta)
+    // opts: the params this script uses (built in sedna.nf). They come in as an
+    // input so that they are part of the task hash: Nextflow does not hash
+    // param values read inside the script, and -resume would reuse stale results
+    val(opts)
 
     output:
     tuple val(sample_name), path("${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name}"), emit: annot
@@ -24,8 +28,8 @@ process MODULE3 {
     sedna-module-3.py \
         --input_fasta      ${fasta} \
         --sample_name      ${sample_name} \
-        --score_thres      ${params.gecco_score_thres} \
-        --cds_count_thres  ${params.gecco_cds_count_thres} \
+        --score_thres      ${opts.score_thres} \
+        --cds_count_thres  ${opts.cds_count_thres} \
         --nslots           ${task.cpus} \
         --output_dir       ${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name} \
         --overwrite

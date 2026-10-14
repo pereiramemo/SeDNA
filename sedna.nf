@@ -85,6 +85,29 @@ workflow {
     }
     log.info "Pipeline will run up to module ${stop}"
 
+    // Per-module options. Each process receives the params its script uses as a
+    // `val` input instead of reading params directly: Nextflow's task hash covers
+    // the script text and the inputs but not param values, so a param read in
+    // the script would not invalidate -resume (bugs/003)
+    module1_opts = [antismash_db:     (params.antismash_db ?: "${params.db_dir}/antismash").toString(),
+                    taxon:            params.taxon.toString(),
+                    genefinding_tool: params.genefinding_tool.toString(),
+                    minlength:        params.minlength.toString()]
+    module2_opts = [deepbgc_db:       (params.deepbgc_db ?: "${params.db_dir}/deepbgc/data").toString(),
+                    score_thres:      params.deepbgc_score_thres.toString(),
+                    cds_count_thres:  params.deepbgc_cds_count_thres.toString(),
+                    minlength:        params.minlength.toString()]
+    module3_opts = [score_thres:      params.gecco_score_thres.toString(),
+                    cds_count_thres:  params.gecco_cds_count_thres.toString()]
+    module4_opts = [overlap_thres:    params.overlap_thres.toString()]
+    module5_opts = [hmm_db:           (params.pfam_hmm ?: "${params.db_dir}/pfam/Pfam-A.hmm").toString(),
+                    cds_id:           params.cds_id.toString(),
+                    evalue_thres:     params.evalue_thres.toString(),
+                    cut_ga:           params.cut_ga.toString().toBoolean()]
+    module6_opts = [embedding_method: params.embedding_method.toString(),
+                    threshold:        params.birch_threshold.toString(),
+                    alpha:            params.alpha.toString()]
+
     // Input samplesheet, selected by --input_mode
     if (params.input_mode == "from_fasta") {
         samplesheet = params.from_fasta_tsv
@@ -112,15 +135,15 @@ workflow {
     annot_ch = channel.empty()
     n_tools = 0
     if (!params.skip_antismash.toBoolean()) {
-        annot_ch = annot_ch.mix(MODULE1(fasta_ch).annot.map { s, d -> tuple(s, 1, d) })
+        annot_ch = annot_ch.mix(MODULE1(fasta_ch, module1_opts).annot.map { s, d -> tuple(s, 1, d) })
         n_tools += 1
     }
     if (!params.skip_deepbgc.toBoolean()) {
-        annot_ch = annot_ch.mix(MODULE2(fasta_ch).annot.map { s, d -> tuple(s, 2, d) })
+        annot_ch = annot_ch.mix(MODULE2(fasta_ch, module2_opts).annot.map { s, d -> tuple(s, 2, d) })
         n_tools += 1
     }
     if (!params.skip_gecco.toBoolean()) {
-        annot_ch = annot_ch.mix(MODULE3(fasta_ch).annot.map { s, d -> tuple(s, 3, d) })
+        annot_ch = annot_ch.mix(MODULE3(fasta_ch, module3_opts).annot.map { s, d -> tuple(s, 3, d) })
         n_tools += 1
     }
     if (n_tools == 0) {
@@ -139,7 +162,7 @@ workflow {
             .join(fasta_ch, by: 0)
             .map { sample_name, dirs, fasta -> tuple(sample_name, fasta, dirs) }
             // -> tuple(sample_name, fasta, [tool dirs in tool order])
-        module4_out   = MODULE4(module4_in_ch, file(params.synonyms_file, checkIfExists: true))
+        module4_out   = MODULE4(module4_in_ch, file(params.synonyms_file, checkIfExists: true), module4_opts)
     }
 
     // MODULE5: Pfam domain annotation of each dereplicated catalog, or -- when
@@ -165,7 +188,7 @@ workflow {
             module5_out = MODULE5_PRECOMPUTED(module5_in_ch)
 
         } else {
-            module5_out = MODULE5(derep_version_ch)
+            module5_out = MODULE5(derep_version_ch, module5_opts)
         }
     }
 
@@ -173,7 +196,8 @@ workflow {
     if (stop >= 6) {
         module6_out = MODULE6(module5_out.domains.collect(),
                               file(params.embeddings_file, checkIfExists: true),
-                              file(params.counts_file, checkIfExists: true))
+                              file(params.counts_file, checkIfExists: true),
+                              module6_opts)
     }
 
 }

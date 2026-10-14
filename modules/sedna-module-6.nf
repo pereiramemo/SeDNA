@@ -18,6 +18,10 @@ process MODULE6 {
     path(domain_dirs, stageAs: "domains_*")
     path(embeddings_file)
     path(counts_file)
+    // opts: the params this script uses (built in sedna.nf). They come in as an
+    // input so that they are part of the task hash: Nextflow does not hash
+    // param values read inside the script, and -resume would reuse stale results
+    val(opts)
 
     output:
     path("${task.process.toLowerCase().replaceFirst('module', 'module-')}")
@@ -26,9 +30,9 @@ process MODULE6 {
     """
     sedna-module-6.py \
         --input_dirs        ${domain_dirs} \
-        --embedding_method  ${params.embedding_method} \
-        --threshold         ${params.birch_threshold} \
-        --alpha             ${params.alpha} \
+        --embedding_method  ${opts.embedding_method} \
+        --threshold         ${opts.threshold} \
+        --alpha             ${opts.alpha} \
         --embeddings_file   ${embeddings_file} \
         --counts_file       ${counts_file} \
         --output_dir        ${task.process.toLowerCase().replaceFirst('module', 'module-')} \

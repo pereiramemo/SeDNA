@@ -17,19 +17,22 @@ process MODULE5 {
 
     input:
     tuple val(sample_name), path(derep_dir)
+    // opts: the params this script uses (built in sedna.nf). They come in as an
+    // input so that they are part of the task hash: Nextflow does not hash
+    // param values read inside the script, and -resume would reuse stale results
+    val(opts)
 
     output:
     path("${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name}"), emit: domains
 
     script:
-    def cut_ga = params.cut_ga.toBoolean() ? "--cut_ga" : "--no-cut_ga"
     """
     sedna-module-5.py \
         --input_dir     ${derep_dir} \
-        --cds_id        ${params.cds_id} \
-        --hmm_db        ${params.pfam_hmm ?: "${params.db_dir}/pfam/Pfam-A.hmm"} \
-        --evalue_thres  ${params.evalue_thres} \
-        ${cut_ga} \
+        --cds_id        ${opts.cds_id} \
+        --hmm_db        ${opts.hmm_db} \
+        --evalue_thres  ${opts.evalue_thres} \
+        ${opts.cut_ga ? "--cut_ga" : "--no-cut_ga"} \
         --nslots        ${task.cpus} \
         --output_dir    ${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name} \
         --overwrite
