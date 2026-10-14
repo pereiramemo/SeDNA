@@ -1,6 +1,11 @@
 # SeDNA — Technical Documentation
 
-**Version documented:** 0.1.0 (`bin/VERSION.txt`)
+**Version documented:** the README cites the release as **v1.0.0 (beta)** via Zenodo
+(doi:10.5281/zenodo.23224099). The legacy `old/bin/VERSION.txt` still reports **0.1.0**.
+**Code state:** the Nextflow port (`sedna.nf`, `modules/`, `bin/sedna-module-<N>.py`) on `main`,
+built on top of commit `f86f2f7` (2026-10-08).
+**License:** CC BY-NC-SA 4.0 (`LICENSE`). Developed at NewAtlantis Labs, since acquired by
+Ocean BioMetrics.
 **Scope:** methods and implementation of the SeDNA bioprospecting pipeline — BGC annotation,
 dereplication, protein-domain annotation, BGC embedding representation, and BGC clustering
 into Gene Cluster Families (GCFs).
@@ -26,59 +31,92 @@ rather than a binary "hit / no hit".
 ### 1.1 Pipeline at a glance
 
 ```
-FASTA (MAGs / assembled contigs)
+FASTA (MAGs / assembled contigs), one row per sample in the samplesheet
         |
-        |  [1] BGC annotation          modules: run_antismash | run_deepbgc | run_gecco | run_all
-        |      antiSMASH + deepBGC + GECCO, run independently on the same input
+        |  [1] BGC annotation          MODULE1 antiSMASH | MODULE2 deepBGC | MODULE3 GECCO
+        |      three independent, concurrent branches on the same input
         v
-   per-tool GBKs + annot_metadata.tsv  (bgc_annot/inter/<tool>/)
+   per-tool GBKs + annot_metadata.tsv  (intermediate/module-{1,2,3}/<sample>/)
         |
-        |  [2] Dereplication           module: dereplicate
+        |  [2] Dereplication           MODULE4
         |      coordinate-based merging of the three per-tool predictions
         v
-   non-redundant BGC catalog          (bgc_annot/sorted/dereplicated/)
+   non-redundant BGC catalog          (intermediate/module-4/<sample>/dereplicated/)
         |
-        |  [3] Domain annotation       module: annot_cds  (or import_annot_cds)
+        |  [3] Domain annotation       MODULE5  (or MODULE5_PRECOMPUTED, --input_mode from_annot)
         |      pyHMMER hmmsearch vs Pfam-A  ->  cath-resolve-hits
         v
-   *_annotdoms_resolved.tsv  (one domain architecture string per BGC)
+   *_annotdoms_resolved.tsv  (one domain architecture per BGC; intermediate/module-5/<sample>/)
         |
-        |  [4] Embedding + [5] clustering   module: cluster_sif (or cluster_mean)
+        |  [4] Embedding + [5] clustering   MODULE6 (--embedding_method sif | mean), all samples at once
         |      word2vec domain vectors -> SIF-weighted BGC vector -> BIRCH
         v
-   bgc_embeddings.tsv  +  clust.tsv  (bgc_id -> GCF id)
+   bgc_embeddings-<method>.tsv  +  bgc_clust-<method>-thres<T>.tsv  (bgc_id -> GCF id)
 ```
+
+Section numbers in this document follow the *methods* ([1]–[5] above). Module numbers
+(MODULE1–6) follow the Nextflow processes.
 
 ### 1.2 Architecture and execution model
 
-`bin/sedna.sh` is a thin dispatcher. Each module is a standalone Python script in `bin/` that is
-executed inside its **own conda environment**, activated on the fly by the dispatcher:
+SeDNA is a Nextflow pipeline with the same layout as the sibling MG-Clust pipeline
+(`~/workspace/repos/tools/MG-Clust`):
 
-| Module | Script | Environment |
-|---|---|---|
-| `run_antismash` | `bin/run_antismash.py` | `sedna_antismash_env` |
-| `run_deepbgc` | `bin/run_deepbgc.py` | `sedna_deepbgc_env` |
-| `run_gecco` | `bin/run_gecco.py` | `sedna_gecco_env` |
-| `run_all` | the three above, in sequence | (all three) |
-| `dereplicate` | `bin/dereplicate.py` | `sedna_general_purpose_env` |
-| `annot_cds` | `bin/annot_cds.py` | `sedna_annot_cds_env` |
-| `import_annot_cds` | `bin/import_annot_cds.py` | `sedna_import_annot_cds_env` |
-| `get_bgc_coverage` | `bin/get_bgc_coverage.py` | `sedna_get_bgc_coverage_env` |
-| `cluster_mean` | `bin/cluster_mean.py` | `sedna_general_purpose_env` |
-| `cluster_sif` | `bin/cluster_sif.py` | `sedna_general_purpose_env` |
+```
+sedna.nf                          entry point: --help, --input_mode, --stop_at_module, skip flags
+nextflow.config                   params, per-process cpus/memory/maxForks, standard + slurm profiles
+modules/sedna-module-<N>.nf       one Nextflow process (or variant) per module
+bin/
+  sedna-module-<N>.py             all logic of module N; called by the matching .nf
+  utils.py                        shared helpers + the former src/bgc_annot and src/bgc_derep code
+  download_dbs.py                 pre-fetch Pfam-A / antiSMASH / deepBGC databases into ~/.sedna/db
+  download_imgs.py                pre-fetch the six images into the Apptainer cache
+  get_bgc_coverage.py             standalone (§9.1)
+  query_ai.py                     standalone proof of concept (§9.2)
+docker/
+  Dockerfile.module-<N>           one micromamba image per module
+  dockerbuild_commands.sh
+  resources/requirements-module-<N>.yml
+resources/
+  embeddings/*.pkl                domain embeddings + domain frequency table (staged into MODULE6)
+  bgc_class_synonyms.tsv          cross-tool BGC class vocabulary (staged into MODULE4)
+tests/data/
+  from_fasta.tsv                  samplesheet for the three test MAGs
+  oceandna/                       three subsampled OceanDNA MAGs
+old/                              the pre-Nextflow version: sedna.sh, install/, original scripts
+docs/
+```
 
-This per-module isolation is what makes the "plug-and-play" integration of third-party BGC
-predictors practical: antiSMASH 6.1.1 (Python 3.9), deepBGC 0.1.31 (Python 3.7 + TensorFlow 1.15)
-and GECCO 0.9.10 (Python 3.12) have mutually incompatible dependency trees and simply cannot
-coexist in a single environment.
+| Module | Process | Script | Former module(s) | Granularity |
+|---|---|---|---|---|
+| 1 | `MODULE1` | `bin/sedna-module-1.py` | `run_antismash` | per sample |
+| 2 | `MODULE2` | `bin/sedna-module-2.py` | `run_deepbgc` | per sample |
+| 3 | `MODULE3` | `bin/sedna-module-3.py` | `run_gecco` | per sample |
+| 4 | `MODULE4` | `bin/sedna-module-4.py` | `dereplicate` | per sample |
+| 5 | `MODULE5`, `MODULE5_PRECOMPUTED` | `bin/sedna-module-5.py` | `annot_cds`, `import_annot_cds` | per sample |
+| 6 | `MODULE6` | `bin/sedna-module-6.py` | `cluster_sif`, `cluster_mean` | once, `.collect()`ed |
+
+Each module runs in its **own container image** (`ghcr.io/pereiramemo/sedna/module-<N>`), built
+from its own conda env. This per-module isolation is what makes the "plug-and-play" integration of
+third-party BGC predictors practical: antiSMASH 6.1.1 (Python 3.9), deepBGC 0.1.31 (Python 3.7 +
+TensorFlow 1.15) and GECCO 0.9.10 (Python 3.12) have mutually incompatible dependency trees and
+simply cannot coexist in a single environment.
+
+Modules 1–3 are independent branches of the DAG and run concurrently. The legacy `sedna.sh --module run_all` ran them
+in sequence. Their outputs are regrouped per sample with `groupTuple(size: <number of active tools>)`
+before module 4, sorted back into tool order and staged as `tool_1`, `tool_2`, …. Module 4 therefore
+always merges them in the order antiSMASH → deepBGC → GECCO, where the old `dereplicate.py` used
+filesystem walk order.
 
 Usage:
 
 ```bash
-conda activate sedna_main_env
-sedna.sh --module <module> --params "<module arguments>"
-sedna.sh --module <module> --params "--help"     # per-module help
+nextflow run sedna.nf --from_fasta_tsv tests/data/from_fasta.tsv --output_dir results
+nextflow run sedna.nf --help
 ```
+
+`old/bin/sedna.sh` and `old/install/` keep the previous conda-based version runnable for
+comparison.
 
 ---
 
@@ -111,12 +149,12 @@ metadata parser, without touching the downstream modules.
 ### 2.2 How each tool is invoked
 
 All three wrappers take the same general arguments (`--input_sample`, `--sample_name`,
-`--output_dir`, `--threads`, `--overwrite`) and validate the input FASTA before running.
+`--output_dir`, `--nslots`, `--overwrite`) and validate the input FASTA before running.
 
-**antiSMASH** (`bin/run_antismash.py`)
+**antiSMASH** (MODULE1, `bin/sedna-module-1.py`)
 
 ```
-antismash --cpus <threads> --genefinding-tool prodigal-m --taxon bacteria \
+antismash --cpus <nslots> --databases <db_dir>/antismash --genefinding-tool prodigal-m --taxon bacteria \
           --allow-long-headers --minlength 1000 --minimal \
           --output-dir <out> <input.fasta>
 ```
@@ -124,38 +162,42 @@ antismash --cpus <threads> --genefinding-tool prodigal-m --taxon bacteria \
 - `prodigal-m` (Prodigal metagenomic/anonymous mode) is the default gene finder — appropriate for
   fragmented metagenomic contigs of unknown provenance.
 - `--minimal` skips the optional comparative/analysis modules; only detection is needed here.
-- Outputs are the `*.region*.gbk` files, moved into `bgc_annot/inter/antismash/gbks/`.
+- Outputs are the `*.region*.gbk` files, moved into `module-1/<sample>/gbks/`.
 
-**deepBGC** (`bin/run_deepbgc.py`)
+**deepBGC** (MODULE2, `bin/sedna-module-2.py`)
 
 ```
+DEEPBGC_DOWNLOADS_DIR=<db_dir>/deepbgc \
 deepbgc pipeline --detector deepbgc --classifier product_class \
                  --prodigal-meta-mode --min-nucl 1000 --output <out> <input.fasta>
 ```
 
 - deepBGC emits a single multi-record GBK, which is split into one file per BGC
-  (`utilities.gbk_splitter`) and renamed to the antiSMASH-style `<contig>.region<NNN>.gbk`
+  (`bin/utils.py::gbk_splitter`) and renamed to the antiSMASH-style `<contig>.region<NNN>.gbk`
   convention so that all tools produce a uniform file layout.
-- Predictions are then filtered **after** the run (`utilities.gbk_filter`) using
-  `--score_thres` (default **0.80**) and `--cds_count_thres` (default **3** CDS).
+- Predictions are then filtered **after** the run (`bin/utils.py::gbk_filter`) using
+  `--deepbgc_score_thres` (default **0.80**) and `--deepbgc_cds_count_thres` (default **3** CDS).
   Filtering is deliberately done post-hoc rather than via tool arguments, so that relaxing the
   stringency later does not require re-running the tool; discarded clusters are retained under
   `gbks_removed/`.
 - The reported BGC class is the `product_class` with the highest score.
 
-**GECCO** (`bin/run_gecco.py`)
+**GECCO** (MODULE3, `bin/sedna-module-3.py`)
 
 ```
-gecco run --genome <input.fasta> --cds 3 --threshold 0.80 --jobs <threads> --output-dir <out>
+gecco run --genome <input.fasta> --cds 3 --threshold 0.80 --jobs <nslots> --output-dir <out>
 ```
+
+- `--cds` and `--threshold` come from `--gecco_cds_count_thres` and `--gecco_score_thres`. Unlike
+  deepBGC, GECCO filters during the run, not post hoc.
 
 - GECCO's `*_cluster_<n>.gbk` outputs are renamed to `.region<NNN>.gbk`, again for uniformity.
 
 ### 2.3 Per-tool metadata
 
 Each wrapper ends by parsing its own GenBank output into a common table,
-`bgc_annot/inter/<tool>/annot_metadata.tsv`, via a tool-specific parser in
-`bin/src/bgc_annot/utilities.py` (`antismash_annot_parser`, `deepbgc_annot_parser`,
+`module-<N>/<sample>/annot_metadata.tsv`, via a tool-specific parser in
+`bin/utils.py` §3 (`antismash_annot_parser`, `deepbgc_annot_parser`,
 `gecco_annot_parser`). The schema is identical across tools:
 
 | Field | Meaning |
@@ -176,9 +218,8 @@ Notes on normalisation performed by the parsers:
   *derived* — a BGC is flagged as on-edge if its start is < 3 bp from the contig start or its end
   is within 30 bp of the contig end. This is why the original assembly FASTA must be passed to the
   parser (it supplies contig lengths).
-- BGC class vocabularies differ between tools; `resources/bgc_class_synonyms.tsv` (75 entries)
-  maps antiSMASH / GECCO / deepBGC class labels onto a single harmonised
-  `bgc_class_formatted` vocabulary.
+- `bgc_class` is left as each tool reports it at this stage. Harmonisation across the three
+  vocabularies happens later, in the `dereplicate` module — see §3.3.
 - Because several BGCs can be predicted on one contig and antiSMASH reuses the contig name as the
   accession, parsers disambiguate rows with a per-contig counter (`acc-<i>`) used as the DataFrame
   index.
@@ -207,11 +248,12 @@ Dereplication is **coordinate-based**, not sequence-alignment based. It uses onl
 `start` and `end` from the per-tool metadata tables — which is what makes it fast and completely
 independent of how many tools are integrated.
 
-`bin/dereplicate.py` loads every `annot_metadata.tsv` found under `--input_dir` and merges them
+`bin/sedna-module-4.py` loads the `annot_metadata.tsv` of every directory in `--input_dirs` (in
+the order antiSMASH, deepBGC, GECCO; tools that found nothing are skipped) and merges them
 **recursively and pairwise**: tables 1 and 2 are merged, the merged catalog becomes the new
 table 1, which is then merged with table 3, and so on (`recursive_dereplication`). For each pair:
 
-**(a) Shared contigs** (`bin/src/bgc_derep/dsc.py::dereplicate_shared_contigs`).
+**(a) Shared contigs** (`bin/utils.py::dereplicate_shared_contigs`).
 For every pair of BGCs predicted on the same contig, the relative position of the two intervals
 is classified into one of **13 topological cases**, and a representative is selected:
 
@@ -246,21 +288,53 @@ Because the merge is iterative, a BGC that "won" in an earlier comparison can be
 longer competitor later; the code explicitly removes such superseded entries from the dereplicated
 set at each case.
 
-**(b) Non-shared contigs** (`bin/src/bgc_derep/dnsc.py`). BGCs on contigs seen by only one of the
+**(b) Non-shared contigs** (`bin/utils.py::dereplicate_non_shared_contigs`). BGCs on contigs seen by only one of the
 two tables cannot conflict with anything, so they are carried over directly (case 14).
 
-**(c) Single input table** (`bin/src/bgc_derep/sst.py`). If only one tool was run, every BGC is
+**(c) Single input table** (`bin/utils.py::sort_single_table`). If only one tool was run, every BGC is
 passed straight through (case 14) so that downstream modules receive the same directory layout.
 
-### 3.3 Output
+### 3.3 BGC class harmonisation
 
-`bin/src/bgc_derep/outputs.py` writes four sibling directories under `bgc_annot/sorted/`:
+The three predictors use incompatible product vocabularies, so counting or comparing classes
+across tools is meaningless on the raw labels:
+
+| Tool | Vocabulary | Examples |
+|---|---|---|
+| antiSMASH | ~70 fine-grained rule names | `NRPS`, `NRPS-like`, `T1PKS`, `lanthipeptide-class-i`, `siderophore` |
+| GECCO | 8 coarse labels, sometimes compound | `NRP`, `NRP;Polyketide`, `Terpene`, `Unknown` |
+| deepBGC | 7 product classes | `Alkaloid`, `NRP`, `Polyketide`, `RiPP`, `Saccharide`, `Terpene`, `Other` |
+
+`bin/utils.py::map_synonyms()` resolves them against `resources/bgc_class_synonyms.tsv` (75 rows;
+staged into MODULE4 by Nextflow, overridable with
+`--synonyms_file`). The table carries one column per tool plus the target vocabulary:
 
 ```
-sorted/
+bgc_class_antismash   bgc_class_gecco    bgc_class_deepbgc   bgc_class_formatted
+NRPS                  NRP                NRP                 nrp
+NRPS-like             NRP                NRP                 nrp
+NRPS                  NRP;Polyketide     NRP                 nrp
+```
+
+The `tool` field of each BGC selects the lookup column (`bgc_class_<tool>`), and the resulting
+value is attached to the metadata row as a new `bgc_class_formatted` field. The step runs after
+the GBKs are copied and before the metadata tables are written (`sedna-module-4.py` §3.7),
+so `dereplicated/annot_metadata.tsv` carries **both** the tool's original `bgc_class` and the
+harmonised `bgc_class_formatted`.
+
+The mapping is applied only to the dereplicated dictionary; §11.9 and §11.10 describe two sharp
+edges in the current implementation (an unguarded lookup, and leakage of the new column into the
+audit tables).
+
+### 3.4 Output
+
+`bin/sedna-module-4.py` writes four sibling directories under `module-4/<sample>/`:
+
+```
+module-4/<sample>/
   dereplicated/           <- the catalog: one entry per unique locus
     annot_metadata.tsv
-    gbks/                 <- symlinks to the winning per-tool GBK files
+    gbks/                 <- copies of the winning per-tool GBK files, named <bgc_id>.gbk
   overlapped/             <- audit: predictions that matched another prediction
   partially_overlapped/   <- audit: staggered matches below --overlap_thres
   non_overlapped/         <- audit: predictions with no counterpart
@@ -272,9 +346,13 @@ Each retained BGC receives a stable, self-describing identifier:
 bgc_id = <tool>__<sample_name>__<contig_id>__<start>__<end>
 ```
 
-and the metadata gains two columns: `bgc_id` and `link` (absolute path of the symlinked GBK).
-Because the catalog stores symlinks rather than copies, the provenance of every sequence back to
-the tool that produced it is preserved.
+and `dereplicated/annot_metadata.tsv` gains three columns on top of the per-tool schema of §2.3:
+`bgc_id`, `link` (the GBK path relative to the table, `gbks/<bgc_id>.gbk`) and `bgc_class_formatted` (§3.3). The three
+audit tables get `bgc_id` and `link` but, by the aliasing described in §11.10, an inconsistent
+`bgc_class_formatted`. The provenance of every sequence is kept in the `tool` and `file` columns
+and in the `bgc_id` prefix. Before the Nextflow port the catalog held symlinks into the per-tool
+directories. Those would point into upstream task work dirs, which are neither mounted into the
+MODULE4 container nor kept after `nextflow clean`, so the catalog now holds copies.
 
 ---
 
@@ -286,19 +364,19 @@ similarity. Each BGC is reduced to the ordered list of Pfam domains encoded in i
 
 ### 4.1 `annot_cds` — pyHMMER + cath-resolve-hits
 
-`bin/annot_cds.py` performs three steps for every `*.gbk` in the dereplicated catalog:
+`bin/sedna-module-5.py` (MODULE5) performs three steps for every `*.gbk` in the dereplicated catalog:
 
-**Step 1 — CDS extraction.** `utilities.extract_cds` writes the translated CDSs of each BGC to a
+**Step 1 — CDS extraction.** `bin/utils.py::extract_cds` writes the translated CDSs of each BGC to a
 FASTA file, using `--cds_id` (default `locus_tag`; `protein_id` for MIBiG-style records) as the
 sequence identifier.
 
 **Step 2 — HMM search with [pyHMMER](https://github.com/althonos/pyhmmer)** (0.10.x):
 
 ```python
-pyhmmer.hmmer.hmmsearch(hmms, seqs, domE=evalue_thres, bit_cutoffs="gathering", cpus=threads)
+pyhmmer.hmmer.hmmsearch(hmms, seqs, domE=evalue_thres, bit_cutoffs="gathering", cpus=nslots)
 ```
 
-- Database: **Pfam-A** (`~/.local/share/pfam/Pfam-A.hmm`, downloaded by `install/get_databases.sh`).
+- Database: **Pfam-A** (`<db_dir>/pfam/Pfam-A.hmm`, downloaded by `bin/download_dbs.py`).
 - `--cut_ga` (**default on**) uses Pfam's per-family curated **gathering thresholds** rather than a
   single global E-value — the family-specific cutoffs are what Pfam itself recommends and they
   behave much more consistently across domain families of different information content.
@@ -337,8 +415,8 @@ field the embedding step reads. Files are named `<bgc_id>_annotdoms_resolved.tsv
 
 ### 4.2 `import_annot_cds` — reusing existing annotations
 
-`bin/import_annot_cds.py` produces the same `*_annotdoms_resolved.tsv` files from annotation that
-already exists elsewhere: given `--annot_metadata` (BGC coordinates), a `--gff` of gene features
+`MODULE5_PRECOMPUTED` (`--input_mode from_annot`; `bin/sedna-module-5.py --gff --domtblout`) produces the same `*_annotdoms_resolved.tsv` files from annotation that
+already exists elsewhere: given the module-4 catalog's `annot_metadata.tsv` (BGC coordinates), a `--gff` of gene features
 and a `--domtblout` of a genome-wide hmmsearch, it selects the CDSs falling inside each BGC and
 runs the resolution step on that subset. This avoids re-running HMM searches when the host
 pipeline has already annotated the MAGs.
@@ -367,7 +445,7 @@ similarity — as opposed to the all-or-nothing matching of a rule- or BLAST-bas
 ### 5.2 Training the domain embeddings (word2vec)
 
 The shipped model is `resources/embeddings/dom_embeddings_mtx_mibig_pfam.pkl`
-(installed to `~/.local/share/sedna/embeddings/`), a plain `dict` mapping a Pfam family name to a
+(staged into MODULE6 by Nextflow), a plain `dict` mapping a Pfam family name to a
 list of 100 floats. **1,262 keys**, 100 dimensions.
 
 Training (R, `word2vec` package; development scripts live outside this repository, in
@@ -398,7 +476,7 @@ Training (R, `word2vec` package; development scripts live outside this repositor
 
 ### 5.3 From domain vectors to a BGC vector — SIF (`cluster_sif`)
 
-`bin/cluster_sif.py` implements **Smooth Inverse Frequency** weighting (Arora, Liang & Ma, ICLR
+`bin/sedna-module-6.py --embedding_method sif` (formerly `cluster_sif.py`) implements **Smooth Inverse Frequency** weighting (Arora, Liang & Ma, ICLR
 2017, *"A Simple but Tough-to-Beat Baseline for Sentence Embeddings"*,
 <https://openreview.net/pdf?id=SyK00v5xx>) — a sentence-embedding baseline that is competitive
 with far heavier models while remaining fully deterministic and training-free at inference time.
@@ -439,12 +517,12 @@ frequency-weighted sentence vectors is dominated by whatever is common to *all* 
 "being a BGC at all" — and contributes a large shared offset that suppresses the relative
 differences the clustering needs. Removing it sharpens the between-BGC contrast.
 
-The result is written to `--bgc_embeddings_tsv` (rows = BGCs, 100 columns) and is directly reusable
+The result is written to `bgc_embeddings-sif.tsv` (rows = BGCs, 100 columns) and is directly reusable
 for downstream novelty and diversity analyses.
 
 ### 5.4 `cluster_mean` — the simpler alternative
 
-`bin/cluster_mean.py` is the earlier/baseline variant: it maps domains to vectors and takes the
+`--embedding_method mean` (formerly `cluster_mean.py`) is the earlier/baseline variant: it maps domains to vectors and takes the
 **unweighted arithmetic mean**, with no SIF weighting, no L2 normalisation and no principal
 component removal, then clusters with BIRCH exactly as `cluster_sif` does. It is retained for
 comparison; `cluster_sif` is the recommended module.
@@ -455,13 +533,13 @@ comparison; `cluster_sif` is the recommended module.
 
 ### 6.1 Configuration
 
-Both clustering modules use scikit-learn's
+MODULE6 uses scikit-learn's
 [`Birch`](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.Birch.html)
 (Balanced Iterative Reducing and Clustering using Hierarchies, Zhang et al., SIGMOD 1996):
 
 ```python
-birch = Birch(n_clusters=None, compute_labels=False, copy=False)
-birch.threshold = <--threshold>
+birch = Birch(n_clusters=None, compute_labels=False, copy=False)   # sif; mean: Birch(n_clusters=None)
+birch.threshold = <--birch_threshold>
 birch.branching_factor = <number of BGCs>
 birch.fit(X)
 labels = birch.predict(X)
@@ -470,7 +548,7 @@ labels = birch.predict(X)
 - `n_clusters=None` — **no global clustering step**. The leaf subclusters of the CF-tree *are* the
   GCFs. There is no need to state in advance how many gene cluster families a metagenome contains
   (which is the actual unknown), and no arbitrary cut of a dendrogram.
-- `threshold` (`--threshold`, default 1; 0.5 in the README example) is the **only** parameter that
+- `threshold` (`--birch_threshold`, default 1; 0.5 in the README example) is the **only** parameter that
   matters biologically: it is the maximum radius of a leaf subcluster in embedding space, i.e. the
   granularity of a GCF. Lower = tighter, more numerous families.
 - `branching_factor` is set to the number of BGCs, i.e. no artificial limit on the number of
@@ -501,7 +579,8 @@ catalog and the clustering in one-to-one correspondence.
 
 ### 6.4 Output
 
-`--output_tsv` (default `bgc_clust_output.tsv`) is a two-column table:
+`bgc_clust-<method>-thres<T>.tsv` (e.g. `bgc_clust-sif-thres0.5.tsv`, in `intermediate/module-6/`
+and symlinked into `workables/`) is a two-column table:
 
 ```
 bgc_id    cluster_id
@@ -520,7 +599,7 @@ reference member is a candidate novel family.
 > repository, and it is not applied to the shipped model.** The file
 > `resources/embeddings/dom_embeddings_mtx_mibig_pfam.pkl` was verified to be bit-identical to the
 > raw word2vec output of the training script (`dom_embeddings_mtx_mibig_pfam.tsv`), so no learned
-> re-weighting is currently baked into it, and neither `cluster_sif.py` nor `cluster_mean.py`
+> re-weighting is currently baked into it, and neither embedding method of `bin/sedna-module-6.py`
 > applies per-dimension weights. This section records the method for documentation purposes and
 > should be reconciled with the original analysis scripts before being cited as implemented.
 
@@ -587,33 +666,60 @@ comparison.
 
 ---
 
-## 9. Auxiliary module: `get_bgc_coverage`
+## 9. Auxiliary modules
+
+### 9.1 `get_bgc_coverage`
 
 `bin/get_bgc_coverage.py` estimates read coverage (i.e. relative abundance) for each BGC in the
 catalog, from either a BAM file of reads mapped to the assembly or a per-contig coverage table
 (e.g. produced by VEBA), using `bedtools`/`pysam` over the BGC coordinates in `annot_metadata.tsv`.
 This turns presence/absence GCF profiles into quantitative ones for cross-sample comparison.
 
+### 9.2 `query_ai` — proof of concept, not wired in
+
+`bin/query_ai.py` takes a JSON file of BGC descriptors (`domains`, `class`, `mibig_hit`,
+`taxonomy`, `environment`), fills them into a fixed prompt template asking for a hypothesis about
+the cluster's biotechnological potential, and POSTs it to a chat-completions endpoint over
+`urllib` (no SDK dependency, stdlib only). The key comes from `--openai-api-key` or
+`$OPENAI_API_KEY`; `--test` runs two assertions on the prompt builder and exits without a network
+call.
+
+Status and caveats:
+
+- It is **not a pipeline module**: no process calls it, and it has no image of its own (it is
+  stdlib only).
+- It consumes a hand-written JSON file; nothing in the pipeline emits that file, so there is no
+  path yet from `annot_metadata.tsv` + `bgc_clust-*.tsv` to a `query_ai` input.
+- The default model is `gpt-4` against `api.openai.com`. Both the provider and that model id are
+  hard-coded defaults from the original POC and worth revisiting before this becomes a supported
+  module.
+- Output is free text printed to stdout; it is not captured, not attached to any BGC record, and
+  not reproducible run to run.
+
 ---
 
 ## 10. Installation and data dependencies
 
 ```bash
-./install/install.sh        # creates sedna_main_env + one env per module, installs bin/ into each
-./install/get_databases.sh  # downloads databases and installs the embedding models
-./install/uninstall.sh      # removes all of the above
+bash docker/dockerbuild_commands.sh   # builds the six module images (run from the repo root)
+bin/download_imgs.py                  # or: cache the images for Apptainer (slurm profile)
+bin/download_dbs.py                   # fetches Pfam-A, antiSMASH and deepBGC databases
 ```
 
-`get_databases.sh` populates:
+`bin/download_dbs.py` populates `--db_dir` (default `~/.sedna/db`, which must match `params.db_dir`).
+The directory is bind-mounted into MODULE1, MODULE2 and MODULE5*; nothing is baked into the images:
 
-| Path | Content |
-|---|---|
-| `~/.local/share/pfam/Pfam-A.hmm` | Pfam-A HMM library (EBI, current release) |
-| `~/.local/share/antismash/` | antiSMASH databases (`download-antismash-databases`) |
-| (deepBGC default location) | deepBGC models (`deepbgc download`) |
-| `~/.local/share/sedna/embeddings/` | `dom_embeddings_mtx_mibig_pfam.pkl`, `domain2counts_mibig3.1_vs_pfam.pkl` |
+| Path | Content | Used by |
+|---|---|---|
+| `<db_dir>/pfam/Pfam-A.hmm` | Pfam-A HMM library (EBI, current release), fetched on the host | MODULE5 |
+| `<db_dir>/antismash/` | antiSMASH databases (`download-antismash-databases`, run in the module-1 image) | MODULE1 (`--databases`) |
+| `<db_dir>/deepbgc/data/` | deepBGC models (`deepbgc download`, run in the module-2 image) | MODULE2 (`DEEPBGC_DOWNLOADS_DIR`) |
 
-A `docker/Dockerfile` is also provided.
+The layout matches the legacy `~/.local/share`, so `--db_dir ~/.local/share` reuses databases fetched
+by `old/install/get_databases.sh`. The embedding pickles and `bgc_class_synonyms.tsv` stay in
+`resources/` and are staged into MODULE6 and MODULE4 as ordinary Nextflow inputs.
+
+The previous conda-based installer is kept in `old/install/`.
 
 ---
 
@@ -623,39 +729,78 @@ These are behaviours of the current code worth being aware of when interpreting 
 modifying the pipeline.
 
 1. **SIF weight fallback inverts the SIF intent for rare domains.** In
-   `cluster_sif.py::map_domain2embeddings`, a domain absent from the filtered weight table receives
+   `bin/sedna-module-6.py::map_domain2embeddings` (formerly `cluster_sif.py`), a domain absent from the filtered weight table receives
    `weights.get(domain, 1e-3)`. The weight table only keeps domains with count ≥ 10 (656 of 3,397),
    so of the 1,262 domains in the embedding vocabulary, **580 rare domains (plus 26 keys with no
    count entry, including word2vec's `</s>` token) receive the 1e-3 fallback** — *lower* than the
    weight of the most frequent domain in the corpus (0.0088). Under SIF, rare domains should
    receive the *highest* weights (up to 0.894 here). The practical effect is that rare — and
    therefore potentially most diagnostic — domains are nearly excluded from the BGC vector.
-2. **Sum vs. weighted mean.** The docstring says "weighted mean", but the implementation sums the
-   weighted domain vectors and divides by the L2 norm; the accumulated `total_weight` variable is
-   unused. This is consistent with the SIF paper up to a scale factor, and the subsequent
-   L2 normalisation makes the difference immaterial — but the code and docstring disagree.
+2. *(Docstring fixed in the Nextflow port.)* **Sum vs. weighted mean.** The old `cluster_sif.py`
+   said "weighted mean", but it sums the weighted domain vectors and divides by the L2 norm, and its
+   accumulated `total_weight` variable was unused. This is consistent with the SIF paper up to a
+   scale factor, and the L2 normalisation makes the difference immaterial. The port removed the
+   unused variable and the docstring now says "weighted sum"; the computation is unchanged.
 3. **Embedding corpus vs. default annotation settings.** The shipped embedding matrix and the
    frequency table were derived from the MIBiG 3.1 Pfam annotation produced with an **E-value**
-   threshold, while `annot_cds.py` defaults to **gathering thresholds** (`--cut_ga`). The two
+   threshold, while MODULE5 (formerly `annot_cds.py`) defaults to **gathering thresholds** (`--cut_ga`). The two
    regimes produce slightly different domain vocabularies (26 embedded domains have no entry in the
    frequency table). A `*_cut_ga_thres` embedding variant exists in the development repository and
    would be the matched choice for the default annotation settings.
-4. **`cluster_mean` exports embeddings before NaN filtering**, `cluster_sif` after (and after PC
-   removal). The two `--bgc_embeddings_tsv` outputs therefore do not have the same row sets.
+4. **`--embedding_method mean` exports embeddings before NaN filtering**, `sif` after (and after PC
+   removal). `bgc_embeddings-mean.tsv` and `bgc_embeddings-sif.tsv` therefore do not have the same row sets.
 5. **Unannotated BGCs get string cluster ids** while BIRCH-assigned ones are integers; consumers of
-   `clust.tsv` should coerce the column to a single type.
+   `bgc_clust-*.tsv` should coerce the column to a single type.
 6. **Dereplication is coordinate-based only.** Identical BGCs occurring on *different* contigs
    (e.g. the same locus in two MAGs, or a locus split across two contigs by the assembler) are not
    merged; they are treated as distinct catalog entries and are expected to be reunited later at
    the GCF level.
-7. **Case 13 in `dsc.py`** deletes `dereplicated_bgcs[tool2][id1]` (note: `id1`, not `id2`) when the
+7. **Case 13 in `dereplicate_shared_contigs`** (`bin/utils.py`, formerly `dsc.py`) deletes `dereplicated_bgcs[tool2][id1]` (note: `id1`, not `id2`) when the
    two intervals are identical. Worth reviewing.
-8. **`dereplicate.py`'s `--metadata` path is not fully usable on its own.** With `--metadata` but
-   no `--input_dir`, the default output directory is still derived from `input_dir`
-   (`os.path.abspath(None)`) and raises a `TypeError`; passing neither argument raises a
-   `TypeError` from `os.path.exists(None)` instead of the intended error message. In practice
-   `--input_dir` (optionally together with `--output_dir`) is the supported invocation.
+8. *(Resolved by the Nextflow port.)* The old `dereplicate.py` `--metadata` path crashed with a
+   `TypeError` when used without `--input_dir`. `bin/sedna-module-4.py` takes only `--input_dirs`
+   and a required `--output_dir`.
+9. **`map_synonyms` does an unguarded dict lookup and will crash on an unmapped class.**
+   `synonyms_dicts[row_tool][bgc_class_i]` (`bin/utils.py::map_synonyms`) raises `KeyError` whenever a
+   tool reports a class absent from its column of `bgc_class_synonyms.tsv`, which aborts the whole
+   MODULE4 run at the last step — after the GBKs have already been copied. The risk is
+   not hypothetical: commit `ac44bcf` ("added siderophore for antiSMASH — although this was
+   supposed to be obsolete it can appear") was exactly this failure. GECCO is the most exposed
+   tool, with only 8 label forms in the table against a vocabulary that can emit other
+   `;`-joined combinations. A `.get(bgc_class_i, bgc_class_i)` — or an explicit `unknown` —
+   would degrade instead of aborting.
+10. **The new `bgc_class_formatted` column leaks into the audit tables, unevenly.** `dereplicate_shared_contigs` stores
+    *the same* pandas Series object in `dereplicated_bgcs` and in the overlapped / partially
+    overlapped / non-overlapped dictionaries, and `row_as_df.loc['bgc_class_formatted'] = …`
+    enlarges that Series in place (verified). So every audit row that also won dereplication gains
+    the column while the others do not, and `create_df`'s `pd.concat` fills the rest with `NaN`.
+    The dereplicated catalog itself is correct; only the audit tables are inconsistent.
+11. **`bgc_class_synonyms.tsv` has duplicate keys per tool column.** `NRPS` and `NRPS-like` each
+    appear on several rows (differing only in the GECCO/deepBGC columns), so
+    `set_index(tool_column)[ref_column].to_dict()` silently keeps the **last** occurrence. Harmless
+    today because the duplicates all map to the same `bgc_class_formatted` value, but it means the
+    table cannot express a tool-pair-dependent mapping, and a future edit that breaks that
+    coincidence would fail silently. Note also that pandas reads the literal `NA` cells as `NaN`,
+    which collapses all of them into a single `NaN` key.
+12. **The upstream attribution comment on `format_gbks` was removed.** `bin/src/bgc_annot/utilities.py` (now `bin/utils.py` §3.11)
+    previously carried "Adapted from Satria A. Kautsar / Wageningen University & Research /
+    Copyright (C) 2020"; it was deleted in the same period the repository gained a CC BY-NC-SA 4.0
+    `LICENSE`. If that function is still derived from BiG-SLiCE's code, removing the notice does not
+    remove the obligation, and the two changes together are worth a look before release — the
+    upstream licence may also be incompatible with relicensing under CC BY-NC-SA.
+13. *(Fixed in the Nextflow port.)* **The README contained a stray `test push` line** between the beta warning and the workflow
+    figure, apparently left over from verifying push access.
 
+14. *(Fixed in the Nextflow port.)* **`map_synonyms` looked up the wrong tool's column after the
+    second pairwise merge.** `dereplicate_shared_contigs` takes `tool1 = metadata_df1['tool'].iloc[0]`,
+    and from the second merge round on `metadata_df1` is the merged catalog. Its rows (e.g. deepBGC
+    BGCs) are therefore filed under the key of the catalog's *first* row's tool (e.g. `antismash`).
+    `map_synonyms` selected the synonyms column from that dict key, so a deepBGC `Polyketide` was
+    looked up in `bgc_class_antismash` and raised `KeyError`. The legacy pipeline aborts on the shipped
+    test sample `OceanDNA-b45222_redu` for this reason. `map_synonyms` now selects the column from each
+    row's own `tool` field, as §3.3 describes. The mis-filing itself is left in place, which keeps the
+    port output-identical otherwise. It only affects which dict key a row sits under, not the row's
+    content or the written tables.
 ---
 
 ## 12. References
@@ -677,3 +822,77 @@ modifying the pipeline.
   doi:10.1038/s41589-019-0400-9.
 - **BiG-SLiCE** — Kautsar et al., *GigaScience* 2021.
 - **OceanDNA catalog** (test data) — Nishimura & Yoshizawa, *Sci. Data* 2022.
+
+---
+
+## 13. Nextflow restructuring (implemented)
+
+The pipeline was ported from the `sedna.sh` dispatcher plus hand-written loops to Nextflow,
+following the sibling **MG-Clust** pipeline (`~/workspace/repos/tools/MG-Clust`). §1.2 describes
+the resulting layout. This section records the decisions behind it.
+
+### 13.1 Why
+
+The previous design chained modules by hand: the README's getting-started section was a sequence of
+`for s in ${SAMPLES}; do sedna.sh --module … ; done` loops. That left no dependency graph, no
+resumability, no per-process resource declarations and no parallelism beyond what the user wrote.
+A workflow manager provides all of these, and MG-Clust already demonstrated the pattern in this
+codebase family.
+
+### 13.2 Module mapping
+
+The original design proposal had four modules, with the three predictors inside one. They need three images,
+so each predictor became its own module, giving six:
+
+| Process | Former module(s) | Granularity |
+|---|---|---|
+| `MODULE1` | `run_antismash` | per sample |
+| `MODULE2` | `run_deepbgc` | per sample |
+| `MODULE3` | `run_gecco` | per sample |
+| `MODULE4` | `dereplicate` | per sample |
+| `MODULE5` / `MODULE5_PRECOMPUTED` | `annot_cds` / `import_annot_cds` | per sample |
+| `MODULE6` | `cluster_sif` / `cluster_mean` (`--embedding_method sif\|mean`) | once, over all samples |
+| *(no process)* | `get_bgc_coverage`, `query_ai` | standalone `bin/` tools |
+
+Modules 1–3 run concurrently instead of sequentially as `run_all` did.
+
+### 13.3 The four-layer module pattern
+
+Every module consists of a Python script (`bin/sedna-module-<N>.py`), a Nextflow process
+(`modules/sedna-module-<N>.nf`), a Dockerfile (`docker/Dockerfile.module-<N>`) and a conda env
+(`docker/resources/requirements-module-<N>.yml`). A new module needs all four, plus an `include`
+and a process call in `sedna.nf` and a `docker build` line in `docker/dockerbuild_commands.sh`.
+
+The former `bin/src/bgc_annot` and `bin/src/bgc_derep` packages were merged into `bin/utils.py`,
+which every script imports. The module-2 image is Python 3.7, so `utils.py` imports only the stdlib
+at module level, imports pandas/biopython inside the functions that use them, and avoids syntax
+newer than 3.7.
+
+### 13.4 Points resolved during the port
+
+- **`task.cpus`, not `params.nslots`.** Module `.nf` files pass `--nslots ${task.cpus}`, so
+  `nextflow.config` is the single source of truth for resources. The scripts' former `--threads`
+  argument is now `--nslots`.
+- **Databases stay bind-mounted.** Pfam-A, the antiSMASH databases and the deepBGC models live under
+  `params.db_dir` (`~/.sedna/db`) and are mounted through `containerOptions`. `install/get_databases.sh`
+  became `bin/download_dbs.py`. Module 1 now passes `--databases` to antiSMASH, which the old wrapper
+  never did, and module 2 exports `DEEPBGC_DOWNLOADS_DIR`.
+- **Isolated work dirs.** Module 4 copies the catalog GBKs instead of symlinking them, writes `link`
+  as a relative path, and remaps each per-tool `file` path onto the staged copy (§3.4).
+- **Deterministic merge order.** Module 4 merges antiSMASH → deepBGC → GECCO, where the old script
+  used filesystem walk order.
+- **Deterministic GCFs.** BIRCH depends on insertion order. The old `cluster_sif.py` used `os.walk`
+  order, which is filesystem-dependent, and a naive port would use Nextflow task-completion order, so
+  the GCFs could change between runs on identical input. MODULE6 now sorts BGCs by (sample name, file
+  name). As a result its cluster ids can differ from a legacy run on the same data. Fed the legacy row
+  order, it reproduces the legacy clustering exactly.
+- **Empty samples.** A sample with no predicted BGC yields an empty catalog instead of aborting the
+  run. Only module 6 fails, and only if no sample had any BGC.
+- **Memory.** The `memory` directive is declared per process and scales with `task.attempt` under
+  the `slurm` profile. Unlike MG-Clust's MEGAHIT/bbduk/DuckDB, none of SeDNA's tools sizes itself
+  from host RAM, so no `--max_mem` threading was needed.
+- **Scientific logic unchanged.** The port is structural. The caveats in §11 (SIF weight fallback,
+  case 13, unmapped classes in `map_synonyms`, …) are deliberately carried over unchanged. There is one
+  exception: §11.14, a crash that stopped the legacy pipeline from completing on its own test data.
+- **`sedna.sh` is legacy.** It and the conda installer are kept in `old/` as a reference
+  implementation.
