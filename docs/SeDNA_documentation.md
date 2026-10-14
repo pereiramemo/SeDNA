@@ -801,6 +801,14 @@ modifying the pipeline.
     row's own `tool` field, as §3.3 describes. The mis-filing itself is left in place, which keeps the
     port output-identical otherwise. It only affects which dict key a row sits under, not the row's
     content or the written tables.
+15. *(Fixed after the Nextflow port.)* **antiSMASH and deepBGC coordinates were relative to the BGC,
+    not the contig.** `antismash_annot_parser` and `deepbgc_annot_parser` read `start`/`end` from a
+    feature inside the per-BGC GBK, which holds only the BGC's sequence, so `start` was ≈ 0. GECCO's
+    coordinates (from its TSV) were already on the contig, so module 4 compared positions on different
+    frames. The parsers now add the BGC's offset on the contig (antiSMASH `Orig. start`, deepBGC
+    accession suffix `_<start>-<end>`). This changes the coordinates and `bgc_id` of every antiSMASH or
+    deepBGC BGC not starting at position 0, and can change dereplication results. Details in
+    `bugs/001-antismash-deepbgc-relative-coordinates.md`.
 ---
 
 ## 12. References

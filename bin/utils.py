@@ -308,8 +308,12 @@ def antismash_annot_parser(input_dir: str = None, sample_name: str = None,
                 bgc_class = get_features(record, "cand_cluster", "product")
                 # start and end coordinates and length
                 location = get_feature_location(record, "cand_cluster")  # these coords are zero based
-                start = int(location[0])
-                end = int(location[1])
+                # The region GBK holds only the region's sequence, so feature
+                # coords are relative to it; Orig. start (zero based) is the
+                # region's start on the contig
+                offset = int(record.annotations['structured_comment']['antiSMASH-Data']['Orig. start'])
+                start = offset + int(location[0])
+                end = offset + int(location[1])
                 length = end - start  # 1 is not added given that coords are zero based
                 # on edge
                 on_edge = get_features(record, "cand_cluster", "contig_edge")
@@ -373,8 +377,12 @@ def deepbgc_annot_parser(input_dir: str = None, sample_name: str = None,
 
                 # start and end coords, and length
                 coords = get_feature_location(record, "cluster")  # these coords are zero based
-                start = int(coords[-2])
-                end = int(coords[-1])
+                # The record holds only the BGC's sequence, so feature coords are
+                # relative to it; the acc suffix _<start>-<end> (zero based) gives
+                # the BGC's position on the contig
+                offset = int(re.search('_([0-9]+)-[0-9]+$', acc).group(1))
+                start = offset + int(coords[-2])
+                end = offset + int(coords[-1])
                 length = end - start  # 1 is not added given that coords are zero based
 
                 # add index
