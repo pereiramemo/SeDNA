@@ -1,0 +1,8 @@
+name: sedna-module-1
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.9
+  - antismash=6.1.1
+  - pandas=2.2.2
