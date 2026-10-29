@@ -4,6 +4,10 @@ Sedna is a bioinformatic pipeline dedicated to the bioprospecting analysis of Bi
 The tasks performed by Sedna are the following.  
 **Identify BGC sequences**. To take full advantage of current and future developments in BGC prediction, our pipeline implements a plug-and-play integration of third-party BGC annotation tools. This allows us to use an ensemble approach to improve both sensitivity and specificity in BGC detection. At present, the tools included are antiSMASH, gecco, and deepBGC.  
 **Creating a BGC catalog**. Since we integrate different BGC prediction tools, some BGC sequences will be predicted by more than one tool, leading to duplications in our results. To generate a catalog of unique BGC sequences, our pipeline implements a dereplication step. This process uses the contig IDs and coordinates of the BGC sequences to remove duplicates. Accordingly, this approach enables us to obtain a catalog of unique BGC sequences that integrates predictions from multiple BGC annotation tools.  
+**Outputs**. For each sample, Sedna writes the predictions of each annotation tool and a dereplicated and standardized BGC dataset. The predictions of all tools share a common format: a metadata table (`annot_metadata.tsv`) and one GenBank file per BGC, named after the antiSMASH convention. In the dereplicated dataset, the BGC classes of the different tools are mapped to a common vocabulary (`bgc_class_formatted`), and each BGC records the tools that predicted it (`tools`, `n_tools`). The dataset comes in three versions, which contain the same BGCs and differ only in the coordinates of BGCs predicted by more than one tool:
+- `longest`: the longest prediction.
+- `core`: the region supported by the most tools (their intersection when they all overlap).
+- `extended`: from the leftmost start to the rightmost end of all predictions.
 
 # How to install
 
