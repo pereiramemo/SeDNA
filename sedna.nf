@@ -1,10 +1,10 @@
 #!/usr/bin/env -S nextflow run
 
 // Include modules
-include { MODULE1 } from './modules/sedna-module-1.nf'
-include { MODULE2 } from './modules/sedna-module-2.nf'
-include { MODULE3 } from './modules/sedna-module-3.nf'
-include { MODULE4 } from './modules/sedna-module-4.nf'
+include { MODULE1_ANTISMASH } from './modules/sedna-module-1.nf'
+include { MODULE2_DEEPBGC } from './modules/sedna-module-2.nf'
+include { MODULE3_GECCO } from './modules/sedna-module-3.nf'
+include { MODULE4_DEREPLICATION } from './modules/sedna-module-4.nf'
 
 workflow {
 
@@ -33,9 +33,9 @@ workflow {
           --from_fasta_tsv  TSV   sample_name, fasta (default: ${params.from_fasta_tsv})
 
         MODULES 1-3 — BGC annotation:
-          --skip_antismash  BOOL  Skip MODULE1 antiSMASH (default: ${params.skip_antismash})
-          --skip_deepbgc    BOOL  Skip MODULE2 deepBGC (default: ${params.skip_deepbgc})
-          --skip_gecco      BOOL  Skip MODULE3 GECCO (default: ${params.skip_gecco})
+          --skip_antismash  BOOL  Skip MODULE1_ANTISMASH (default: ${params.skip_antismash})
+          --skip_deepbgc    BOOL  Skip MODULE2_DEEPBGC (default: ${params.skip_deepbgc})
+          --skip_gecco      BOOL  Skip MODULE3_GECCO (default: ${params.skip_gecco})
           --minlength       INT   Minimum sequence length, antiSMASH and deepBGC (default: ${params.minlength})
           --taxon           STR   antiSMASH taxon: bacteria | fungi (default: ${params.taxon})
           --genefinding_tool STR  antiSMASH gene finder (default: ${params.genefinding_tool})
@@ -46,7 +46,7 @@ workflow {
           --gecco_score_thres       NUM  GECCO probability threshold (default: ${params.gecco_score_thres})
           --gecco_cds_count_thres   INT  Minimum CDSs per GECCO BGC (default: ${params.gecco_cds_count_thres})
 
-        MODULE4 — Dereplication:
+        MODULE4_DEREPLICATION — Dereplication:
           --overlap_thres   NUM   Overlap fraction separating overlapped from partially overlapped (default: ${params.overlap_thres})
           --synonyms_file   PATH  BGC class synonyms table (default: ${params.synonyms_file})
         """.stripIndent()
@@ -89,25 +89,26 @@ workflow {
     annot_ch = channel.empty()
     n_tools = 0
     if (!params.skip_antismash.toBoolean()) {
-        annot_ch = annot_ch.mix(MODULE1(fasta_ch, module1_opts).annot.map { s, d -> tuple(s, 1, d) })
+        annot_ch = annot_ch.mix(MODULE1_ANTISMASH(fasta_ch, module1_opts).annot.map { s, d -> tuple(s, 1, d) })
         n_tools += 1
     }
     if (!params.skip_deepbgc.toBoolean()) {
-        annot_ch = annot_ch.mix(MODULE2(fasta_ch, module2_opts).annot.map { s, d -> tuple(s, 2, d) })
+        annot_ch = annot_ch.mix(MODULE2_DEEPBGC(fasta_ch, module2_opts).annot.map { s, d -> tuple(s, 2, d) })
         n_tools += 1
     }
     if (!params.skip_gecco.toBoolean()) {
-        annot_ch = annot_ch.mix(MODULE3(fasta_ch, module3_opts).annot.map { s, d -> tuple(s, 3, d) })
+        annot_ch = annot_ch.mix(MODULE3_GECCO(fasta_ch, module3_opts).annot.map { s, d -> tuple(s, 3, d) })
         n_tools += 1
     }
     if (n_tools == 0) {
         error "--skip_antismash, --skip_deepbgc and --skip_gecco are all set; at least one BGC annotation tool must run"
     }
 
-    // MODULE4: Dereplicate the per-tool predictions of each sample. groupTuple
-    // with size: releases a sample as soon as all its active tools finished; the
-    // dirs are then put back in tool order (antiSMASH, deepBGC, GECCO), which is
-    // the pairwise merge order and must not depend on which tool finished first.
+    // MODULE4_DEREPLICATION: Dereplicate the per-tool predictions of each
+    // sample. groupTuple with size: releases a sample as soon as all its active
+    // tools finished; the dirs are then put back in tool order (antiSMASH,
+    // deepBGC, GECCO), which is the pairwise merge order and must not depend on
+    // which tool finished first.
     if (stop >= 4) {
         module4_in_ch = annot_ch
             .groupTuple(by: 0, size: n_tools)
@@ -116,7 +117,7 @@ workflow {
             .join(fasta_ch, by: 0)
             .map { sample_name, dirs, fasta -> tuple(sample_name, fasta, dirs) }
             // -> tuple(sample_name, fasta, [tool dirs in tool order])
-        module4_out   = MODULE4(module4_in_ch, file(params.synonyms_file, checkIfExists: true), module4_opts)
+        module4_out   = MODULE4_DEREPLICATION(module4_in_ch, file(params.synonyms_file, checkIfExists: true), module4_opts)
     }
 
 }
