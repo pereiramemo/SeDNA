@@ -1,4 +1,8 @@
 # SeDNA Bioprospecting Pipeline
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23224099.svg)](https://doi.org/10.5281/zenodo.23224099)
+
+This GitHub repository is archived in Zenodo with the DOI [10.5281/zenodo.23224099](https://doi.org/10.5281/zenodo.23224099) (see Citation).
+
 Sedna is a bioinformatic pipeline dedicated to the bioprospecting analysis of Biosynthetic Gene Clusters in metagenomic data.
 
 The tasks performed by Sedna are the following.  
@@ -75,16 +79,28 @@ The pipeline runs four modules:
 
 Modules 1–3 run concurrently. Any of them can be dropped with `--skip_antismash`, `--skip_deepbgc` or `--skip_gecco`. Since the same sequences are annotated with different tools, some BGCs are predicted more than once; module 4 merges these duplicates into one catalog per sample, using the contig IDs and coordinates of the predictions. It works with any number of annotation tools, and writes the catalog in three versions (`longest`, `core`, `extended`; see Outputs). `--stop_at_module N` stops the pipeline after module N.
 
+Default thresholds:
+
+| Parameter | Default | Meaning |
+|---|---|---|
+| `--deepbgc_score_thres` | 0.90 | minimum deepBGC score of a BGC |
+| `--deepbgc_cds_count_thres` | 3 | minimum number of CDSs of a deepBGC BGC |
+| `--gecco_score_thres` | 0.80 | minimum GECCO probability of a BGC (GECCO's default) |
+| `--gecco_cds_count_thres` | 3 | minimum number of CDSs of a GECCO BGC (GECCO's default) |
+| `--overlap_thres` | 0.80 | minimum overlap, as a fraction of the longer BGC, for two predictions to be reported as overlapped rather than partially overlapped |
+
+deepBGC detects BGCs with its own default score of 0.5, and module 2 then removes those below `--deepbgc_score_thres` or `--deepbgc_cds_count_thres` (kept in `gbks_removed/`). The deepBGC thresholds are stricter than deepBGC's defaults (score 0.5, one protein), since deepBGC can predict many false positives.
+
 ### Outputs
 
 ```
 tests/sedna-output/
   intermediate/
-    module-1/<sample>/          antiSMASH: gbks/, annot_metadata.tsv
-    module-2/<sample>/          deepBGC:   gbks/, gbks_removed/, annot_metadata.tsv
-    module-3/<sample>/          GECCO:     gbks/, annot_metadata.tsv
-    module-4/<sample>/          dereplicated/{longest,core,extended}/ (the BGC catalog),
-                                overlapped/, partially_overlapped/, non_overlapped/
+    module-1-antismash/<sample>/      antiSMASH: gbks/, annot_metadata.tsv
+    module-2-deepbgc/<sample>/        deepBGC:   gbks/, gbks_removed/, annot_metadata.tsv
+    module-3-gecco/<sample>/          GECCO:     gbks/, annot_metadata.tsv
+    module-4-dereplication/<sample>/  dereplicated/{longest,core,extended}/ (the BGC catalog),
+                                      overlapped/, partially_overlapped/, non_overlapped/
 ```
 
 The de-replicated catalog comes in three versions of the same BGCs, which differ only in the coordinates of BGCs predicted by several tools:
@@ -95,7 +111,9 @@ The de-replicated catalog comes in three versions of the same BGCs, which differ
 | `core` | the region supported by the most tools (their intersection when they all overlap) |
 | `extended` | from the leftmost start to the rightmost end of all predictions |
 
-Each `module-4/<sample>/dereplicated/<version>/annot_metadata.tsv` has the fields `acc`, `bgc_class`, `start`, `end`, `length`, `on_edge`, `contig_id`, `contig_length`, `file`, `sample_name`, `tool`, `bgc_id`, `link`, `bgc_class_formatted`, `tools`, `n_tools` and `members` (plus `core_support` in `core`). The BGC sequences themselves are in `dereplicated/<version>/gbks/` as GenBank files named `<bgc_id>.gbk`. `bgc_id` is `<tool>__<sample>__<contig>__<start>__<end>`, where `<tool>` lists all supporting tools joined by `+` in `core` and `extended`.
+Each `module-4-dereplication/<sample>/dereplicated/<version>/annot_metadata.tsv` has the fields `acc`, `bgc_class`, `start`, `end`, `length`, `on_edge`, `contig_id`, `contig_length`, `file`, `sample_name`, `tool`, `bgc_id`, `link`, `bgc_class_formatted`, `tools`, `n_tools` and `members` (plus `core_support` in `core`). The BGC sequences themselves are in `dereplicated/<version>/gbks/` as GenBank files named `<bgc_id>.gbk`. `bgc_id` is `<tool>__<sample>__<contig>__<start>__<end>`, where `<tool>` lists all supporting tools joined by `+` in `core` and `extended`.
+
+The final catalogs are linked in `output/<sample>`, a symlink to `intermediate/module-4-dereplication/<sample>/dereplicated`, which holds the `longest`, `core` and `extended` versions.
 
 Outputs of modules 1–3 are published only with `--full_output true` (the default).
 
