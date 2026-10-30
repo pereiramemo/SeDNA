@@ -1,11 +1,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // MODULE 4: Dereplication of the BGCs predicted by modules 1-3
-// Input:  module-1/2/3 output dirs of one sample (whichever ran)
-// Output: module-4/<sample>/dereplicated/{longest,core,extended}/ plus the audit dirs
+// Input:  module-1-antismash, module-2-deepbgc and module-3-gecco output dirs of one sample (whichever ran)
+// Output: module-4-dereplication/<sample>/dereplicated/{longest,core,extended}/ plus the audit dirs
 //         {overlapped,partially_overlapped,non_overlapped}/
+//         output/<sample>: link to module-4-dereplication/<sample>/dereplicated (workflow.onComplete
+//         in nextflow.config)
 // ─────────────────────────────────────────────────────────────────────────────
 
-process MODULE4 {
+process MODULE4_DEREPLICATION {
 
     container "ghcr.io/pereiramemo/sedna/module-4:latest"
     publishDir "${params.output_dir}/intermediate/",
@@ -27,7 +29,7 @@ process MODULE4 {
     val(opts)
 
     output:
-    tuple val(sample_name), path("${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name}"), emit: derep
+    tuple val(sample_name), path("module-4-dereplication/${sample_name}"), emit: derep
 
     script:
     def input_dirs = [tool_dirs].flatten().join(' ')
@@ -37,7 +39,7 @@ process MODULE4 {
         --input_fasta    ${fasta} \
         --overlap_thres  ${opts.overlap_thres} \
         --synonyms_file  ${synonyms_file} \
-        --output_dir     ${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name} \
+        --output_dir     module-4-dereplication/${sample_name} \
         --overwrite
     """
 }

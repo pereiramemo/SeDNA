@@ -1,10 +1,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // MODULE 1: BGC annotation with antiSMASH
 // Input:  assembly / MAG FASTA (per sample)
-// Output: module-1/<sample>/{gbks/,annot_metadata.tsv}
+// Output: module-1-antismash/<sample>/{gbks/,annot_metadata.tsv}
 // ─────────────────────────────────────────────────────────────────────────────
 
-process MODULE1 {
+process MODULE1_ANTISMASH {
 
     container "ghcr.io/pereiramemo/sedna/module-1:latest"
     publishDir "${params.output_dir}/intermediate/",
@@ -21,7 +21,7 @@ process MODULE1 {
     val(opts)
 
     output:
-    tuple val(sample_name), path("${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name}"), emit: annot
+    tuple val(sample_name), path("module-1-antismash/${sample_name}"), emit: annot
 
     script:
     """
@@ -33,7 +33,7 @@ process MODULE1 {
         --genefinding_tool  ${opts.genefinding_tool} \
         --minlength         ${opts.minlength} \
         --nslots            ${task.cpus} \
-        --output_dir        ${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name} \
+        --output_dir        module-1-antismash/${sample_name} \
         --overwrite
     """
 }

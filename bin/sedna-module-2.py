@@ -52,8 +52,8 @@ def parse_args() -> argparse.Namespace:
         help=f"deepBGC downloads directory, exported as DEEPBGC_DOWNLOADS_DIR "
              f"(default: {DEEPBGC_DB_DEFAULT})")
 
-    parser.add_argument("--score_thres", dest="score_thres", type=float, default=0.80,
-        help="minimum deepBGC score to keep a BGC (default: 0.80)")
+    parser.add_argument("--score_thres", dest="score_thres", type=float, default=0.90,
+        help="minimum deepBGC score to keep a BGC (default: 0.90)")
 
     parser.add_argument("--cds_count_thres", dest="cds_count_thres", type=int, default=3,
         help="minimum number of CDSs to keep a BGC (default: 3)")

@@ -1,10 +1,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // MODULE 2: BGC annotation with deepBGC
 // Input:  assembly / MAG FASTA (per sample)
-// Output: module-2/<sample>/{gbks/,gbks_removed/,annot_metadata.tsv}
+// Output: module-2-deepbgc/<sample>/{gbks/,gbks_removed/,annot_metadata.tsv}
 // ─────────────────────────────────────────────────────────────────────────────
 
-process MODULE2 {
+process MODULE2_DEEPBGC {
 
     container "ghcr.io/pereiramemo/sedna/module-2:latest"
     publishDir "${params.output_dir}/intermediate/",
@@ -21,7 +21,7 @@ process MODULE2 {
     val(opts)
 
     output:
-    tuple val(sample_name), path("${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name}"), emit: annot
+    tuple val(sample_name), path("module-2-deepbgc/${sample_name}"), emit: annot
 
     script:
     """
@@ -33,7 +33,7 @@ process MODULE2 {
         --cds_count_thres  ${opts.cds_count_thres} \
         --minlength        ${opts.minlength} \
         --nslots           ${task.cpus} \
-        --output_dir       ${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name} \
+        --output_dir       module-2-deepbgc/${sample_name} \
         --overwrite
     """
 }

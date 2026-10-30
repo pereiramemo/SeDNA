@@ -1,10 +1,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // MODULE 3: BGC annotation with GECCO
 // Input:  assembly / MAG FASTA (per sample)
-// Output: module-3/<sample>/{gbks/,annot_metadata.tsv}
+// Output: module-3-gecco/<sample>/{gbks/,annot_metadata.tsv}
 // ─────────────────────────────────────────────────────────────────────────────
 
-process MODULE3 {
+process MODULE3_GECCO {
 
     container "ghcr.io/pereiramemo/sedna/module-3:latest"
     publishDir "${params.output_dir}/intermediate/",
@@ -21,7 +21,7 @@ process MODULE3 {
     val(opts)
 
     output:
-    tuple val(sample_name), path("${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name}"), emit: annot
+    tuple val(sample_name), path("module-3-gecco/${sample_name}"), emit: annot
 
     script:
     """
@@ -31,7 +31,7 @@ process MODULE3 {
         --score_thres      ${opts.score_thres} \
         --cds_count_thres  ${opts.cds_count_thres} \
         --nslots           ${task.cpus} \
-        --output_dir       ${task.process.toLowerCase().replaceFirst('module', 'module-')}/${sample_name} \
+        --output_dir       module-3-gecco/${sample_name} \
         --overwrite
     """
 }

@@ -68,10 +68,10 @@ def parse_args() -> argparse.Namespace:
         help="assembly FASTA of the sample (optionally gzipped); the core and "
              "extended GBKs are cut from it")
 
-    parser.add_argument("--overlap_thres", dest="overlap_thres", type=float, default=0.75,
+    parser.add_argument("--overlap_thres", dest="overlap_thres", type=float, default=0.80,
         help="fraction of overlap (relative to the longest BGC) above which two "
              "staggered BGCs are called overlapped rather than partially overlapped "
-             "(default: 0.75)")
+             "(default: 0.80)")
 
     parser.add_argument("--synonyms_file", dest="synonyms_file", default=SYNONYMS_DEFAULT,
         help=f"table of standardized BGC class names across tools (default: {SYNONYMS_DEFAULT})")
@@ -100,7 +100,11 @@ def load_metadata(input_dir: str) -> pd.DataFrame:
         print(f"No annot_metadata.tsv in {input_dir}; skipping")
         return None
 
-    metadata_df = pd.read_csv(metadata_tsv, sep='\t')
+    # Ids are read as text: otherwise contigs named 1, 2 or NA become numbers
+    # or NaN and are not found among the FASTA ids
+    metadata_df = pd.read_csv(metadata_tsv, sep='\t',
+                              dtype={'acc': str, 'contig_id': str, 'sample_name': str},
+                              keep_default_na=False)
     if metadata_df.shape[0] == 0:
         return None
 

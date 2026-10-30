@@ -4,7 +4,8 @@
 
 # Only the standard library is imported at module level. utils.py is shared by
 # every module image, and those images do not share a dependency set: module 2
-# (deepBGC) runs Python 3.7, and get_bgc_coverage.py runs without biopython.
+# (deepBGC) runs Python 3.7, and download_dbs.py and download_imgs.py run on
+# the host, without pandas or biopython.
 # pandas and Bio are therefore imported inside the functions that need them,
 # and the syntax here must stay Python 3.7 compatible (typing.List, no walrus,
 # no list[str] generics).
@@ -126,23 +127,7 @@ def find_files(input_dir: str = None, pattern: str = r".*\.region\d+.gbk") -> li
     return matching_files
 
 ###############################################################################
-# 3.2 find_dirs
-###############################################################################
-
-def find_dirs(input_dir: str = None, pattern: str = r".*\.region\d+.gbk") -> list:
-    '''
-    Given a directory and pattern, recursively find all the dirs that match
-    the pattern (a regular expression), and return a list with their paths.
-    '''
-    matching_dirs = []
-    for root, dirs, files in os.walk(input_dir, followlinks=True):
-        for dir in dirs:
-            if re.search(pattern, dir):
-                matching_dirs.append(os.path.join(root, dir))
-    return matching_dirs
-
-###############################################################################
-# 3.3 get_features
+# 3.2 get_features
 ###############################################################################
 
 def get_features(record=None, feature_name: str = None, qualifier_name: str = None) -> str:
@@ -155,7 +140,7 @@ def get_features(record=None, feature_name: str = None, qualifier_name: str = No
             return feature.qualifiers[qualifier_name][0]
 
 ###############################################################################
-# 3.4 get_feature_location
+# 3.3 get_feature_location
 ###############################################################################
 
 def get_feature_location(record=None, feature_name: str = None) -> list:
@@ -167,7 +152,7 @@ def get_feature_location(record=None, feature_name: str = None) -> list:
             return [int(feature.location.start), int(feature.location.end)]
 
 ###############################################################################
-# 3.5 get_seqs_length
+# 3.4 get_seqs_length
 ###############################################################################
 
 def get_seqs_length(input_fasta: str = None) -> dict:
@@ -184,7 +169,7 @@ def get_seqs_length(input_fasta: str = None) -> dict:
     return sequences_lengths
 
 ###############################################################################
-# 3.6 gbk_splitter
+# 3.5 gbk_splitter
 ###############################################################################
 
 def gbk_splitter(input_file: str = None, output_dir: str = None,
@@ -230,11 +215,11 @@ def gbk_splitter(input_file: str = None, output_dir: str = None,
         SeqIO.write(gbk, output_file, "gb")
 
 ###############################################################################
-# 3.7 gbk_filter
+# 3.6 gbk_filter
 ###############################################################################
 
 def gbk_filter(input_dir: str = None, sample_name: str = None,
-               deepbgc_score_thres: float = 0.75, deepbgc_cds_count_thres: int = 2,
+               deepbgc_score_thres: float = 0.90, deepbgc_cds_count_thres: int = 3,
                output_dir: str = None):
     '''
     Filter out deepBGC BGC sequences having a low score or a low number of
@@ -277,7 +262,7 @@ def gbk_filter(input_dir: str = None, sample_name: str = None,
             shutil.move(input_gbk, output_dir)
 
 ###############################################################################
-# 3.8 antismash_annot_parser
+# 3.7 antismash_annot_parser
 ###############################################################################
 
 def antismash_annot_parser(input_dir: str = None, sample_name: str = None,
@@ -300,8 +285,15 @@ def antismash_annot_parser(input_dir: str = None, sample_name: str = None,
                 record = SeqIO.read(gbk_handle, "genbank")
                 # acc
                 acc = record.annotations['accessions'][0]
-                # contig_id
-                contig_id = record.name
+                # contig_id: antiSMASH removes characters such as | : ; = from
+                # record names, and then keeps the FASTA id as 'Original ID'.
+                # Biopython appends the comment's next line (the "NOTE: ..."
+                # line) to that value, so only its first word, the id, is kept
+                antismash_data = record.annotations['structured_comment']['antiSMASH-Data']
+                if 'Original ID' in antismash_data:
+                    contig_id = antismash_data['Original ID'].split()[0]
+                else:
+                    contig_id = record.name
                 # contig_length
                 contig_length = fasta_lengths_dict[contig_id]
                 # bgc class
@@ -311,7 +303,7 @@ def antismash_annot_parser(input_dir: str = None, sample_name: str = None,
                 # The region GBK holds only the region's sequence, so feature
                 # coords are relative to it; Orig. start (zero based) is the
                 # region's start on the contig
-                offset = int(record.annotations['structured_comment']['antiSMASH-Data']['Orig. start'])
+                offset = int(antismash_data['Orig. start'])
                 start = offset + int(location[0])
                 end = offset + int(location[1])
                 length = end - start  # 1 is not added given that coords are zero based
@@ -345,7 +337,7 @@ def antismash_annot_parser(input_dir: str = None, sample_name: str = None,
     return pd.DataFrame.from_dict(antismash_gbks_dict, orient='index')
 
 ###############################################################################
-# 3.9 deepbgc_annot_parser
+# 3.8 deepbgc_annot_parser
 ###############################################################################
 
 def deepbgc_annot_parser(input_dir: str = None, sample_name: str = None,
@@ -427,7 +419,7 @@ def deepbgc_annot_parser(input_dir: str = None, sample_name: str = None,
     return pd.DataFrame.from_dict(deepbgc_gbks_dict, orient='index')
 
 ###############################################################################
-# 3.10 gecco_annot_parser
+# 3.9 gecco_annot_parser
 ###############################################################################
 
 def gecco_annot_parser(input_dir: str = None, sample_name: str = None,
@@ -443,7 +435,10 @@ def gecco_annot_parser(input_dir: str = None, sample_name: str = None,
     def tbl_parser(path2tsv: str = None, fasta_lengths_dict: dict = None):
         acc2x = dict()
         i = 1
-        df = pd.read_csv(path2tsv, sep='\t')
+        # Ids are read as text: otherwise contigs named 1, 2 or NA become
+        # numbers or NaN and are not found in fasta_lengths_dict
+        df = pd.read_csv(path2tsv, sep='\t', dtype={'sequence_id': str, 'cluster_id': str},
+                         keep_default_na=False)
         for index, row in df.iterrows():
             # acc
             acc = row['cluster_id']
@@ -470,10 +465,11 @@ def gecco_annot_parser(input_dir: str = None, sample_name: str = None,
             match = re.search(pattern, acc)
             extracted_number = int(match.group(1))
             acc_renamed = re.sub(r'_cluster_\d+', '.region{:03d}'.format(extracted_number), acc)
+            # The GBK path is built from its exact name: a regex search on it
+            # matched other contigs' GBKs when the id held | or was a suffix
             input_gbk_dir = os.path.join(os.path.dirname(input_dir), "gbks")
-            input_gbk_list = find_files(input_dir=input_gbk_dir, pattern=f'{acc_renamed}.gbk')
-            input_gbk = input_gbk_list[0]
-            input_gbk = os.path.abspath(input_gbk)
+            input_gbk = os.path.abspath(os.path.join(input_gbk_dir, f'{acc_renamed}.gbk'))
+            check_file(input_gbk, f"GECCO GBK {input_gbk}")
             # create output dict
             acc2x[acc_i] = {"acc": acc, "bgc_class": bgc_class,
                             "start": start, "end": end, "length": length,
@@ -497,7 +493,7 @@ def gecco_annot_parser(input_dir: str = None, sample_name: str = None,
     return pd.DataFrame.from_dict(gecco_tbl_dict, orient='index')
 
 ###############################################################################
-# 3.11 format_gbks
+# 3.10 format_gbks
 ###############################################################################
 
 def format_gbks(input_dir: str = None, input_tsv: str = None,
@@ -602,74 +598,6 @@ def format_gbks(input_dir: str = None, input_tsv: str = None,
         file_name = os.path.basename(input_gbk)
         output_gbk = os.path.join(output_dir, file_name)
         SeqIO.write(gbk, output_gbk, "gb")
-
-###############################################################################
-# 3.12 extract_cds
-###############################################################################
-
-def extract_cds(input_gbk: str = None, cds_id: str = 'locus_tag', output_fasta: str = None):
-    '''
-    Extract the translated CDSs of a GenBank file into a multi-FASTA file,
-    using the `cds_id` qualifier as the sequence identifier.
-    '''
-    from Bio import SeqIO
-
-    cds_sequences = []
-    with open(input_gbk, "r") as gb_handle:
-        for record in SeqIO.parse(gb_handle, "genbank"):
-            acc = record.annotations['accessions'][0]
-            cds_n = 1
-            for feature in record.features:
-                if feature.type == "CDS":
-                    # Extract CDS sequence and add it to the list
-                    if feature.qualifiers.get(cds_id) is not None:
-                        cds_id_instance = feature.qualifiers[cds_id][0]
-                    else:
-                        cds_id_instance = f'{cds_id}-notfound'
-
-                    coords_start = feature.location.start
-                    coords_end = feature.location.end
-                    cds_header = f"{cds_id_instance}|{coords_start}-{coords_end}|{cds_n}"
-                    cds_sequences.append((cds_header, feature.qualifiers['translation'][0]))
-                    cds_n += 1
-
-    # Write all CDS sequences to the output multi-FASTA file
-    with open(output_fasta, "w") as fasta_handle:
-        for gene_name, sequence in cds_sequences:
-            fasta_handle.write(f">{acc}|{gene_name}\n")
-            fasta_handle.write(f"{sequence}\n")
-
-###############################################################################
-# 3.13 resolve_domain_structure
-###############################################################################
-
-def resolve_domain_structure(path2names: list) -> None:
-    '''
-    Run cath-resolve-hits on <file>.domtblout for every base path in
-    path2names, writing <file>_annotdoms_resolved.tsv.
-    '''
-    for file in path2names:
-        domtblout = f'{file}.domtblout'
-        output_resolved_tsv = f'{file}_annotdoms_resolved.tsv'
-
-        command = [
-            "cath-resolve-hits",
-            "--input-format", "hmmer_domtblout",
-            domtblout
-        ]
-
-        with open(output_resolved_tsv, "w") as outfile:
-            result = subprocess.run(
-                command,
-                stdout=outfile,
-                stderr=subprocess.PIPE,
-                universal_newlines=True
-            )
-
-        if result.returncode != 0:
-            print("Error executing cath-resolve-hits", file=sys.stderr)
-            print("Error message:\n", result.stderr, file=sys.stderr)
-            sys.exit(1)
 
 ###############################################################################
 # 4. BGC dereplication utilities (formerly bin/src/bgc_derep/)
@@ -1146,8 +1074,15 @@ def map_synonyms(synonyms_file: str = None, input_dict: dict = None) -> dict:
                 tool_column = f'bgc_class_{row_tool}'
                 synonyms_dicts[row_tool] = synonyms_df.set_index(tool_column)[ref_column].to_dict()
 
+            # A class missing from the table (e.g. a new antiSMASH product or a
+            # new GECCO label combination) is formatted as 'other'
             bgc_class_i = row_as_df.loc['bgc_class']
-            row_as_df.loc['bgc_class_formatted'] = synonyms_dicts[row_tool][bgc_class_i]
+            if bgc_class_i in synonyms_dicts[row_tool]:
+                row_as_df.loc['bgc_class_formatted'] = synonyms_dicts[row_tool][bgc_class_i]
+            else:
+                print(f"BGC class '{bgc_class_i}' of {row_tool} is not in {synonyms_file}; "
+                      f"formatted as 'other'", file=sys.stderr)
+                row_as_df.loc['bgc_class_formatted'] = 'other'
 
             # update row value
             input_dict[tool][index_value]['row'] = row_as_df
